@@ -11,8 +11,6 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Common {
 
-class JwksFetcher;
-typedef std::unique_ptr<JwksFetcher> JwksFetcherPtr;
 /**
  * JwksFetcher interface can be used to retrieve remote JWKS
  * (https://tools.ietf.org/html/rfc7517) data structures returning a concrete,
@@ -21,13 +19,14 @@ typedef std::unique_ptr<JwksFetcher> JwksFetcherPtr;
  */
 class JwksFetcher {
 public:
+  typedef std::unique_ptr<JwksFetcher> JwksFetcherPtr;
+
   class JwksReceiver {
   public:
     enum class Failure {
-      /* A network error occurred causing JWKS retrieval failure. */
-      Network,
-      /* A failure occurred when trying to parse the retrieved JWKS data. */
-      InvalidJwks,
+      unknown,
+      network,
+      invalid_jwks,
     };
 
     virtual ~JwksReceiver(){};
@@ -41,7 +40,7 @@ public:
      * Retrieval error callback.
      * * @param reason the failure reason.
      */
-    virtual void onJwksError(Failure reason) PURE;
+    virtual void onJwksFailure(Failure reason) PURE;
   };
 
   virtual ~JwksFetcher(){};
@@ -49,7 +48,7 @@ public:
   /*
    * Cancel any in-flight request.
    */
-  virtual void cancel() PURE;
+  virtual void close() PURE;
 
   /*
    * Retrieve a JWKS resource from a remote HTTP host.
@@ -60,7 +59,7 @@ public:
    * @param uri the uri to retrieve the jwks from.
    * @param receiver the receiver of the fetched JWKS or error.
    */
-  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksReceiver& receiver) PURE;
+  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksReceiver* receiver) PURE;
 
   /*
    * Factory method for creating a JwksFetcher.

@@ -2,7 +2,7 @@
 
 #include "extensions/filters/http/well_known_names.h"
 
-#include "test/extensions/filters/http/jwt_authn/test_common.h"
+#include "test/extensions/filters/http/common/test_common.h"
 #include "test/integration/http_protocol_integration.h"
 
 using ::envoy::config::filter::http::jwt_authn::v2alpha::JwtAuthentication;
@@ -16,13 +16,13 @@ namespace {
 
 std::string getFilterConfig(bool use_local_jwks) {
   JwtAuthentication proto_config;
-  MessageUtil::loadFromYaml(ExampleConfig, proto_config);
+  MessageUtil::loadFromYaml(Common::ExampleConfig, proto_config);
 
   if (use_local_jwks) {
-    auto& provider0 = (*proto_config.mutable_providers())[std::string(ProviderName)];
+    auto& provider0 = (*proto_config.mutable_providers())[std::string(Common::ProviderName)];
     provider0.clear_remote_jwks();
     auto local_jwks = provider0.mutable_local_jwks();
-    local_jwks->set_inline_string(PublicKey);
+    local_jwks->set_inline_string(Common::PublicKey);
   }
 
   HttpFilter filter;
@@ -49,14 +49,14 @@ TEST_P(LocalJwksIntegrationTest, WithGoodToken) {
       {":path", "/"},
       {":scheme", "http"},
       {":authority", "host"},
-      {"Authorization", "Bearer " + std::string(GoodToken)},
+      {"Authorization", "Bearer " + std::string(Common::GoodToken)},
   });
 
   waitForNextUpstreamRequest();
   const auto* payload_entry =
       upstream_request_->headers().get(Http::LowerCaseString("sec-istio-auth-userinfo"));
   EXPECT_TRUE(payload_entry != nullptr);
-  EXPECT_EQ(payload_entry->value().getStringView(), ExpectedPayloadValue);
+  EXPECT_EQ(payload_entry->value().getStringView(), Common::ExpectedPayloadValue);
   // Verify the token is removed.
   EXPECT_FALSE(upstream_request_->headers().Authorization());
   upstream_request_->encodeHeaders(Http::TestHeaderMapImpl{{":status", "200"}}, true);
@@ -77,7 +77,7 @@ TEST_P(LocalJwksIntegrationTest, ExpiredToken) {
       {":path", "/"},
       {":scheme", "http"},
       {":authority", "host"},
-      {"Authorization", "Bearer " + std::string(ExpiredToken)},
+      {"Authorization", "Bearer " + std::string(Common::ExpiredToken)},
   });
 
   response->waitForEndStream();
@@ -201,17 +201,17 @@ TEST_P(RemoteJwksIntegrationTest, WithGoodToken) {
       {":path", "/"},
       {":scheme", "http"},
       {":authority", "host"},
-      {"Authorization", "Bearer " + std::string(GoodToken)},
+      {"Authorization", "Bearer " + std::string(Common::GoodToken)},
   });
 
-  waitForJwksResponse("200", PublicKey);
+  waitForJwksResponse("200", Common::PublicKey);
 
   waitForNextUpstreamRequest();
 
   const auto* payload_entry =
       upstream_request_->headers().get(Http::LowerCaseString("sec-istio-auth-userinfo"));
   EXPECT_TRUE(payload_entry != nullptr);
-  EXPECT_EQ(payload_entry->value().getStringView(), ExpectedPayloadValue);
+  EXPECT_EQ(payload_entry->value().getStringView(), Common::ExpectedPayloadValue);
   // Verify the token is removed.
   EXPECT_FALSE(upstream_request_->headers().Authorization());
 
@@ -236,7 +236,7 @@ TEST_P(RemoteJwksIntegrationTest, FetchFailedJwks) {
       {":path", "/"},
       {":scheme", "http"},
       {":authority", "host"},
-      {"Authorization", "Bearer " + std::string(GoodToken)},
+      {"Authorization", "Bearer " + std::string(Common::GoodToken)},
   });
 
   // Fails the jwks fetching.

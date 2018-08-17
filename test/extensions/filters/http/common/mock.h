@@ -51,7 +51,7 @@ public:
     onJwksSuccessImpl(*jwks.get());
   }
   MOCK_METHOD1(onJwksSuccessImpl, void(const google::jwt_verify::Jwks& jwks));
-  MOCK_METHOD1(onJwksError, void(JwksFetcher::JwksReceiver::Failure reason));
+  MOCK_METHOD1(onJwksFailure, void(Failure reason));
 };
 
 } // namespace Common

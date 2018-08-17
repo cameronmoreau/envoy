@@ -11,28 +11,29 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Common {
 namespace {
-
 class JwksFetcherImpl : public JwksFetcher,
                         public Logger::Loggable<Logger::Id::filter>,
                         public Http::AsyncClient::Callbacks {
+private:
+  Upstream::ClusterManager& cm_;
+  JwksFetcher::JwksReceiver* receiver_ = nullptr;
+  const ::envoy::api::v2::core::HttpUri* uri_ = nullptr;
+  Http::AsyncClient::Request* request_ = nullptr;
+
 public:
   JwksFetcherImpl(Upstream::ClusterManager& cm) : cm_(cm) { ENVOY_LOG(trace, "{}", __func__); }
 
-  ~JwksFetcherImpl() { cancel(); }
-
-  void cancel() {
-    if (request_ && !complete_) {
+  void close() {
+    if (request_) {
       request_->cancel();
+      request_ = nullptr;
       ENVOY_LOG(debug, "fetch pubkey [uri = {}]: canceled", uri_->uri());
     }
-    reset();
   }
 
-  void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksFetcher::JwksReceiver& receiver) {
+  void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksFetcher::JwksReceiver* receiver) {
     ENVOY_LOG(trace, "{}", __func__);
-    ASSERT(!receiver_);
-    complete_ = false;
-    receiver_ = &receiver;
+    receiver_ = receiver;
     uri_ = &uri;
     Http::MessagePtr message = Http::Utility::prepareHeaders(uri);
     message->headers().insertMethod().value().setReference(Http::Headers::get().MethodValues.Get);
@@ -46,7 +47,7 @@ public:
   // HTTP async receive methods
   void onSuccess(Http::MessagePtr&& response) {
     ENVOY_LOG(trace, "{}", __func__);
-    complete_ = true;
+    request_ = nullptr;
     const uint64_t status_code = Http::Utility::getResponseStatus(response->headers());
     if (status_code == enumToInt(Http::Code::OK)) {
       ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: success", __func__, uri_->uri());
@@ -60,39 +61,23 @@ public:
           receiver_->onJwksSuccess(std::move(jwks));
         } else {
           ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: invalid jwks", __func__, uri_->uri());
-          receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::InvalidJwks);
+          receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::invalid_jwks);
         }
       } else {
         ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: body is empty", __func__, uri_->uri());
-        receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::Network);
+        receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::network);
       }
     } else {
       ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
-      receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::Network);
+      receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::network);
     }
-    reset();
   }
 
   void onFailure(Http::AsyncClient::FailureReason reason) {
     ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: network error {}", __func__, uri_->uri(),
               enumToInt(reason));
-    complete_ = true;
-    receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::Network);
-    reset();
-  }
-
-private:
-  Upstream::ClusterManager& cm_;
-  bool complete_{};
-  JwksFetcher::JwksReceiver* receiver_{};
-  const envoy::api::v2::core::HttpUri* uri_{};
-  Http::AsyncClient::Request* request_{};
-
-  void reset() {
-    request_ = nullptr;
-    receiver_ = nullptr;
-    uri_ = nullptr;
+    receiver_->onJwksFailure(JwksFetcher::JwksReceiver::Failure::network);
   }
 };
 } // namespace

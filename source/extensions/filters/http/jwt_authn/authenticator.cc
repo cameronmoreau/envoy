@@ -69,6 +69,9 @@ private:
   // The Jwks fetcher object
   Common::JwksFetcherPtr fetcher_;
 
+  // The Jwks fetcher object
+  Common::JwksFetcher::JwksFetcherPtr fetcher_;
+
   // The token data
   std::vector<JwtLocationConstPtr> tokens_;
   JwtLocationConstPtr curr_token_;
@@ -207,6 +210,10 @@ void AuthenticatorImpl::onDestroy() {
     fetcher_->cancel();
   }
 }
+
+void AuthenticatorImpl::onJwksError(Failure) { doneWithStatus(Status::JwksFetchFail); }
+
+void AuthenticatorImpl::onDestroy() { fetcher_->close(); }
 
 // Verify with a specific public key.
 void AuthenticatorImpl::verifyKey() {

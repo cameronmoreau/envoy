@@ -77,6 +77,7 @@ private:
 
   const ::google::jwt_verify::Jwks* setKey(::google::jwt_verify::JwksPtr&& jwks,
                                            MonotonicTime expire) {
+                                           std::chrono::steady_clock::time_point expire) {
     jwks_obj_ = std::move(jwks);
     expiration_time_ = expire;
     return jwks_obj_.get();
