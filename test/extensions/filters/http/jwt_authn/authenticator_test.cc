@@ -23,17 +23,6 @@ using ::testing::_;
 using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::_;
-using Envoy::Extensions::HttpFilters::Common::ExampleConfig;
-using Envoy::Extensions::HttpFilters::Common::ExpectedPayloadValue;
-using Envoy::Extensions::HttpFilters::Common::ExpiredToken;
-using Envoy::Extensions::HttpFilters::Common::GoodToken;
-using Envoy::Extensions::HttpFilters::Common::InvalidAudToken;
-using Envoy::Extensions::HttpFilters::Common::JwksFetcher;
-using Envoy::Extensions::HttpFilters::Common::MockJwksFetcher;
-using Envoy::Extensions::HttpFilters::Common::NonExistKidToken;
-using Envoy::Extensions::HttpFilters::Common::NotYetValidToken;
-using Envoy::Extensions::HttpFilters::Common::ProviderName;
-using Envoy::Extensions::HttpFilters::Common::PublicKey;
 
 namespace Envoy {
 namespace Extensions {
