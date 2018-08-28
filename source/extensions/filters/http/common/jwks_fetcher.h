@@ -24,9 +24,9 @@ public:
   class JwksReceiver {
   public:
     enum class Failure {
-      unknown,
-      network,
-      invalid_jwks,
+      Unknown,
+      Network,
+      InvalidJwks,
     };
 
     virtual ~JwksReceiver(){};
@@ -59,7 +59,7 @@ public:
    * @param uri the uri to retrieve the jwks from.
    * @param receiver the receiver of the fetched JWKS or error.
    */
-  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksReceiver* receiver) PURE;
+  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksReceiver& receiver) PURE;
 
   /*
    * Factory method for creating a JwksFetcher.

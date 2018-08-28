@@ -151,10 +151,10 @@ TEST_F(JwksFetcherTest, TestCancel) {
   EXPECT_TRUE(fetcher != nullptr);
   EXPECT_CALL(request, cancel()).Times(1);
   EXPECT_CALL(receiver, onJwksSuccessImpl(testing::_)).Times(0);
-  EXPECT_CALL(receiver, onJwksError(JwksFetcher::JwksReceiver::Failure::invalid_jwks)).Times(0);
+  EXPECT_CALL(receiver, onJwksError(testing::_)).Times(0);
 
   // Act
-  fetcher->fetch(uri_, &receiver);
+  fetcher->fetch(uri_, receiver);
   // Proper cancel
   fetcher->cancel();
   // Re-entrant cancel
