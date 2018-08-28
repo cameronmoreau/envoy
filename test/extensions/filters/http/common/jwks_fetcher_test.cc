@@ -56,7 +56,7 @@ public:
   testing::NiceMock<Server::Configuration::MockFactoryContext> mock_factory_ctx_;
 };
 
-// Test findByIssuer
+// Test findByIssuer.
 TEST_F(JwksFetcherTest, TestGetSuccess) {
   // Setup
   MockUpstream mock_pubkey(mock_factory_ctx_.cluster_manager_, "200", publicKey);
