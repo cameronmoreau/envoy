@@ -45,3 +45,15 @@ envoy_cc_library(
         "@envoy_api//envoy/api/v2/core:http_uri_cc",
     ],
 )
+
+envoy_cc_library(
+    name = "session_manager_lib",
+    srcs = ["session_manager.cc"],
+    hdrs = ["session_manager.h"],
+    external_deps = [
+        "ssl",
+    ],
+    deps = [
+        "//source/common/common:base64_lib",
+    ],
+)
