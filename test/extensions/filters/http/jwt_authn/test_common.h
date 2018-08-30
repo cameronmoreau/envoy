@@ -3,7 +3,7 @@
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Common {
+namespace JwtAuthn {
 
 // RS256 private key
 //-----BEGIN PRIVATE KEY-----

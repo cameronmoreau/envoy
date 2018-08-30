@@ -69,6 +69,9 @@ private:
   // The Jwks fetcher object
   Common::JwksFetcherPtr fetcher_;
 
+  // The callback used to create a JwksFetcher instance.
+  CreateJwksFetcherCb createJwksFetcherCb_;
+
   // The Jwks fetcher object
   Common::JwksFetcherPtr fetcher_;
 

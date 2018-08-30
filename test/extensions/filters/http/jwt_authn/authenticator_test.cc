@@ -6,8 +6,8 @@
 #include "extensions/filters/http/jwt_authn/filter_config.h"
 
 #include "test/extensions/filters/http/common/mock.h"
-#include "test/extensions/filters/http/common/test_common.h"
 #include "test/extensions/filters/http/jwt_authn/mock.h"
+#include "test/extensions/filters/http/jwt_authn/test_common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/test_common/utility.h"
 
@@ -207,7 +207,8 @@ TEST_F(AuthenticatorTest, TestExpiredJWT) {
 
 // This test verifies when a JWT is not yet valid, JwtNotYetValid status is returned.
 TEST_F(AuthenticatorTest, TestNotYetValidJWT) {
-  EXPECT_CALL(*raw_fetcher_, fetch(_, _)).Times(0);
+  EXPECT_CALL(*fetcher_, fetch(_, _)).Times(0);
+  EXPECT_CALL(mock_cb_, onComplete(Status::JwtNotYetValid)).Times(1);
 
   auto headers =
       Http::TestHeaderMapImpl{{"Authorization", "Bearer " + std::string(NotYetValidToken)}};
