@@ -17,7 +17,20 @@ namespace {
 
 class SessionManagerImpl : public SessionManager {
 private:
+  typedef uint8_t HmacBuffer[EVP_MAX_MD_SIZE];
   char key_[32];
+
+  unsigned int Hmac(const SessionManager::Context& ctx, HmacBuffer mac) const {
+    unsigned int length;
+    const EVP_MD* digester = EVP_sha256();
+    auto macd = HMAC(digester, key_, sizeof(key_),
+                     reinterpret_cast<const unsigned char*>(ctx.c_str()), ctx.size(), mac, &length);
+    if (!macd) {
+      // Never expected to happen.
+      throw std::runtime_error("Unexpected token binding failure");
+    }
+    return length;
+  }
 
 public:
   explicit SessionManagerImpl(const std::string& key) {
@@ -30,20 +43,8 @@ public:
     std::memcpy(key_, characters.c_str(), sizeof(key_));
   }
 
-  unsigned int Hmac(const SessionManager::Context& ctx, uint8_t* mac) const {
-    unsigned int length;
-    const EVP_MD* digester = EVP_sha256();
-    auto macd = HMAC(digester, key_, sizeof(key_),
-                     reinterpret_cast<const unsigned char*>(ctx.c_str()), ctx.size(), mac, &length);
-    if (!macd) {
-      // Never expected to happen.
-      throw std::runtime_error("Unexpected token binding failure");
-    }
-    return length;
-  }
-
   SessionManager::SessionToken CreateToken(const SessionManager::Context& ctx) {
-    uint8_t mac[EVP_MAX_MD_SIZE];
+    HmacBuffer mac;
     auto length = Hmac(ctx, mac);
     return Base64Url::encode(reinterpret_cast<char*>(mac), length);
   }
@@ -56,7 +57,7 @@ public:
       return false;
     }
     // Calculate HMAC of context and compare to the decoded value.
-    uint8_t calculated[EVP_MAX_MD_SIZE];
+    HmacBuffer calculated;
     auto length = Hmac(ctx, calculated);
     if (decoded.length() != length) {
       return false;
