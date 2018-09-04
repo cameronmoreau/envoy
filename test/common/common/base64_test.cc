@@ -45,7 +45,10 @@ TEST(Base64Test, Decode) {
 
   {
     const char* test_string = "\0\1\2\3\b\n\t";
-    EXPECT_FALSE(memcmp(test_string, Base64::decode("AAECAwgKCQ==").data(), 7));
+    const auto decoded = Base64::decode("AAECAwgKCQ==");
+    EXPECT_FALSE(memcmp(test_string, decoded.data(), 7));
+    // Verify inputs with null characters still have the expected length.
+    EXPECT_EQ(decoded.length(), 7);
   }
 
   {

@@ -17,22 +17,22 @@
 #include "gmock/gmock.h"
 
 namespace Envoy {
-class HttpFilterXsrfTest : public testing::Test {
+class HttpFilterSessionManagerTest : public testing::Test {
 
 public:
-  HttpFilterXsrfTest() {
+  HttpFilterSessionManagerTest() {
     session_manager_.reset(new NiceMock<Utils::MockSessionManager>());
-    filter_.reset(new Http::XsrfFilter(cluster_manager_, session_manager_));
+    filter_.reset(new Http::SessionManagerFilter(cluster_manager_, session_manager_));
     filter_->setDecoderFilterCallbacks(callbacks_);
   }
 
   NiceMock<Upstream::MockClusterManager> cluster_manager_;
   Utils::SessionManager::SessionManagerPtr session_manager_;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks_;
-  std::unique_ptr<Http::XsrfFilter> filter_;
+  std::unique_ptr<Http::SessionManagerFilter> filter_;
 };
 
-TEST_F(HttpFilterXsrfTest, TestRequestWithAuthHeaderPassedThrough) {
+TEST_F(HttpFilterSessionManagerTest, TestRequestWithAuthHeaderPassedThrough) {
   // Test requests that contain an Authorization header are passed through without mutation.
   Http::TestHeaderMapImpl scenario = {
       {":method", "GET"},
@@ -45,7 +45,7 @@ TEST_F(HttpFilterXsrfTest, TestRequestWithAuthHeaderPassedThrough) {
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(scenario, false));
 }
 
-TEST_F(HttpFilterXsrfTest, TestRequestWithoutMethodFails) {
+TEST_F(HttpFilterSessionManagerTest, TestRequestWithoutMethodFails) {
   // Test that any request without a method fails.
   Http::TestHeaderMapImpl scenario = {
       {":path", "/"},
@@ -60,7 +60,7 @@ TEST_F(HttpFilterXsrfTest, TestRequestWithoutMethodFails) {
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, filter_->decodeHeaders(scenario, false));
 }
 
-TEST_F(HttpFilterXsrfTest,
+TEST_F(HttpFilterSessionManagerTest,
        TestRequestWithSafeMethodAndTokenCookieArePassedThroughWithAuthorizationHeader) {
   // Test that when a request is received that uses an HTTP safe method and includes an
   // istio_session cookie, the cookie is inserted into the authorization header.
@@ -89,10 +89,10 @@ TEST_F(HttpFilterXsrfTest,
   }
 }
 
-TEST_F(HttpFilterXsrfTest,
+TEST_F(HttpFilterSessionManagerTest,
        TestRequestWithNonSafeMethodAndTokenCookieArePassedThroughWithAuthorizationHeader) {
   // Test that when a request is received that uses an HTTP non-safe method and includes an
-  // istio_session cookie and x-xsrf-token header, that the cookie and header are verified and that
+  // istio_session cookie and x-SessionManager-token header, that the cookie and header are verified and that
   // the cookie is inserted into the authorization header
   Http::TestHeaderMapImpl scenarios[] = {
       {{":method", "POST"},
@@ -100,25 +100,25 @@ TEST_F(HttpFilterXsrfTest,
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
       {{":method", "PUT"},
        {":path", "/"},
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
       {{":method", "PATCH"},
        {":path", "/"},
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
       {{":method", "DELETE"},
        {":path", "/"},
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
   };
   ON_CALL(*reinterpret_cast<NiceMock<Utils::MockSessionManager>*>(session_manager_.get()),
           verifyToken("expected", "expected"))
@@ -131,10 +131,10 @@ TEST_F(HttpFilterXsrfTest,
   }
 }
 
-TEST_F(HttpFilterXsrfTest,
-       TestRequestWithNonSafeMethodAndNonMatchingXsrfTokensDontForwardAnAuthorizationHeader) {
+TEST_F(HttpFilterSessionManagerTest,
+       TestRequestWithNonSafeMethodAndNonMatchingSessionManagerTokensDontForwardAnAuthorizationHeader) {
   // Test that when a request is received that uses an HTTP non-safe method and includes an
-  // istio_session cookie and x-xsrf-token header, that the cookie and header when verification
+  // istio_session cookie and x-SessionManager-token header, that the cookie and header when verification
   // fails does *not* insert and authorization header.
   Http::TestHeaderMapImpl scenarios[] = {
       {{":method", "POST"},
@@ -142,25 +142,25 @@ TEST_F(HttpFilterXsrfTest,
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
       {{":method", "PUT"},
        {":path", "/"},
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
       {{":method", "PATCH"},
        {":path", "/"},
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
       {{":method", "DELETE"},
        {":path", "/"},
        {":authority", "host"},
        {"host", "host"},
        {"cookie", "istio_session=expected"},
-       {"x-xsrf-token", "expected"}},
+       {"x-SessionManager-token", "expected"}},
   };
   ON_CALL(*reinterpret_cast<NiceMock<Utils::MockSessionManager>*>(session_manager_.get()),
           verifyToken(testing::_, testing::_))
@@ -172,10 +172,10 @@ TEST_F(HttpFilterXsrfTest,
   }
 }
 
-TEST_F(HttpFilterXsrfTest,
-       TestRequestWithNonSafeMethodAndMissingXsrfTokenHeaderDontForwardAnAuthorizationHeader) {
+TEST_F(HttpFilterSessionManagerTest,
+       TestRequestWithNonSafeMethodAndMissingSessionManagerTokenHeaderDontForwardAnAuthorizationHeader) {
   // Test that when a request is received that uses an HTTP non-safe method and includes an
-  // istio_session cookie and without a matching x-xsrf-token header does *not* insert and
+  // istio_session cookie and without a matching x-SessionManager-token header does *not* insert and
   // authorization header.
   Http::TestHeaderMapImpl scenarios[] = {
       {{":method", "POST"},
@@ -209,7 +209,7 @@ TEST_F(HttpFilterXsrfTest,
   }
 }
 
-TEST_F(HttpFilterXsrfTest, TestRequestWithoutTokenCookiePassedThroughWithoutModification) {
+TEST_F(HttpFilterSessionManagerTest, TestRequestWithoutTokenCookiePassedThroughWithoutModification) {
   // Test that requests that do not contain a token cookie are passed through without an
   // Authorization header.
   Http::TestHeaderMapImpl scenario = {

@@ -43,14 +43,14 @@ public:
     std::memcpy(key_, characters.c_str(), sizeof(key_));
   }
 
-  SessionManager::SessionToken CreateToken(const SessionManager::Context& ctx) {
+  SessionManager::SessionToken CreateToken(const SessionManager::Context& ctx) const override {
     HmacBuffer mac;
     auto length = Hmac(ctx, mac);
     return Base64Url::encode(reinterpret_cast<char*>(mac), length);
   }
 
   bool VerifyToken(const SessionManager::Context& ctx,
-                   const SessionManager::SessionToken& token) const {
+                   const SessionManager::SessionToken& token) const override {
     // First decode the provided token. If decoding fails bail.
     std::string decoded = Base64Url::decode(token);
     if (decoded.empty()) {
@@ -68,7 +68,7 @@ public:
 } // namespace
 
 SessionManagerPtr SessionManager::Create(const std::string& key) {
-  return std::make_shared<SessionManagerImpl>(key);
+  return std::make_shared<const SessionManagerImpl>(key);
 }
 } // namespace Common
 } // namespace HttpFilters

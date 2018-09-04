@@ -1,0 +1,55 @@
+
+syntax = "proto3";
+
+package envoy.config.filter.http.session_manager.v1alpha;
+
+import "validate/validate.proto";
+
+// This message specifies how a token can be mapped in an HTTP header.
+//
+// Example:
+//
+// .. code-block:: yaml
+//
+//     name: authorization
+//     preamble: Bearer
+//
+// [#not-implemented-hide:]
+message ForwardRule {
+  // The name of the header to use use to forward a token.
+  string name = 1 [(validate.rules).string.min_bytes = 1];
+  // An optional preamble that can be inserted in front of the token value.
+  // An obvious example is the preamble of "Bearer". A preamble and token
+  // will be separated by a space.
+  string preamble = 2 [(validate.rules).string.min_bytes = 1];
+}
+
+// This message specifies the configuration of a Session Manager filter that
+// can be used to extract, validate and forward session tokens. It is expected
+// that a secure transport is used (HTTPS), the token cookie has appropriate
+// attributes such as Secure and SameSite applied and that the binding cookie
+// has the Secure, SameSite and HttpOnly attributes applied.
+//
+// Example:
+//
+// .. code-block:: yaml
+//
+//     secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+//     token: __Secure-acme-session-cookie
+//     binding: x-xsrf-token
+//     forward_header:
+//       name: authorization
+//       preamble: Bearer
+//
+// [#not-implemented-hide:]
+message SessionManager {
+  // The 256-bit base64 encoded shared secret used to validate cryptographic session token bindings.
+  string secret = 1 [(validate.rules).string.min_bytes = 44, (validate.rules).string.max_bytes = 44];
+  // The name of the cookie that contains a session token. It is recommended that this value start with
+  // the string "__Secure-" as described at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie.
+  string token = 2;
+  // The name of the header that includes the cryptographic session token binding.
+  string binding = 3;
+  // The header that the session token should be forwarded in.
+  ForwardRule forward_header = 4;
+}

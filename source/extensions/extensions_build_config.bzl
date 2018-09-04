@@ -40,6 +40,7 @@ EXTENSIONS = {
     "envoy.filters.http.ratelimit":                     "//source/extensions/filters/http/ratelimit:config",
     "envoy.filters.http.rbac":                          "//source/extensions/filters/http/rbac:config",
     "envoy.filters.http.router":                        "//source/extensions/filters/http/router:config",
+    "envoy.filters.http.session_manager":               "//source/extensions/filters/http/session_manager:config",
     "envoy.filters.http.squash":                        "//source/extensions/filters/http/squash:config",
 
     #

@@ -8,33 +8,48 @@
 
 #include "common/common/logger.h"
 
-#include "src/envoy/utils/session_manager.h"
+#include "extensions/filters/http/common/session_manager.h"
+#include "envoy/config/filter/http/session_manager/v1alpha/config.pb.h"
 
 namespace Envoy {
-namespace Http {
-class XsrfFilter : public StreamDecoderFilter, public Logger::Loggable<Logger::Id::filter> {
-public:
-  XsrfFilter(Upstream::ClusterManager& cluster_manager,
-             Utils::SessionManager::SessionManagerPtr session_manager);
+namespace Extensions {
+namespace HttpFilters {
+namespace SessionManager {
 
-  ~XsrfFilter();
+ class SessionManagerFilter : public Http::StreamDecoderFilter, public Logger::Loggable<Logger::Id::filter> {
+ public:
+  SessionManagerFilter(Upstream::ClusterManager &cluster_manager,
+                       const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager &config,
+                       Common::SessionManagerPtr session_manager);
+
+  ~SessionManagerFilter();
 
   // Http::StreamFilterBase
   void onDestroy() override;
   // Http::StreamDecoderFilter
   /* Entry point for decoding request headers. */
-  FilterHeadersStatus decodeHeaders(HeaderMap& headers, bool) override;
+  Http::FilterHeadersStatus decodeHeaders(Http::HeaderMap& headers, bool) override;
   /* Entry point for decoding request data. */
-  FilterDataStatus decodeData(Buffer::Instance&, bool) override;
+  Http::FilterDataStatus decodeData(Buffer::Instance&, bool) override;
   /* Entry point for decoding request headers. */
-  FilterTrailersStatus decodeTrailers(HeaderMap&) override;
+  Http::FilterTrailersStatus decodeTrailers(Http::HeaderMap&) override;
   /* Decoder configuration. */
-  void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) override;
+  void setDecoderFilterCallbacks(Http::StreamDecoderFilterCallbacks& callbacks) override;
 
-private:
+ private:
   Upstream::ClusterManager& cluster_manager_;
-  Utils::SessionManager::SessionManagerPtr session_manager_;
-  StreamDecoderFilterCallbacks* decoder_callbacks_;
+  Common::SessionManagerPtr session_manager_;
+  const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& config_;
+  Http::StreamDecoderFilterCallbacks *decoder_callbacks_ = nullptr;
+
+  /**
+   * Encode the given token according to the configuration.
+   * @param headers HTTP headers to encode the token into.
+   * @param token the token.
+   */
+  void encodeToken(Http::HeaderMap& headers, const std::string& token);
 };
-} // namespace Http
-} // namespace Envoy
+} // namespace SessionManager
+} // namespace HttpFilters
+} // namespace Extensions
+} // Envoy
