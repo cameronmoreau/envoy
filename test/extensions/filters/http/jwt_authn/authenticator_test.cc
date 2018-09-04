@@ -5,7 +5,7 @@
 #include "extensions/filters/http/jwt_authn/authenticator.h"
 #include "extensions/filters/http/jwt_authn/filter_config.h"
 
-#include "test/extensions/filters/http/common/mock.h"
+#include "test/extensions/filters/http/common/jwks_fetcher_mock.h"
 #include "test/extensions/filters/http/jwt_authn/mock.h"
 #include "test/extensions/filters/http/jwt_authn/test_common.h"
 #include "test/mocks/server/mocks.h"

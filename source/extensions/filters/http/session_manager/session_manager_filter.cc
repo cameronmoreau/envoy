@@ -41,7 +41,7 @@ Http::FilterHeadersStatus SessionManagerFilter::decodeHeaders(Http::HeaderMap &h
   ENVOY_LOG(trace, "{}", __func__);
   auto token = Http::Utility::parseCookieValue(headers, config_.token());
   if (!token.empty()) {
-    // If the http method is a safe method (it is non-mutating) forgo binding validation.
+    // If the http method is a safe method (that it is non-mutating) forgo binding validation.
     auto verb = std::string(headers.Method()->value().c_str());
     auto isSafe = std::find(httpSafeMethods.begin(), httpSafeMethods.end(), verb) != httpSafeMethods.end();
     if (isSafe) {
@@ -53,9 +53,7 @@ Http::FilterHeadersStatus SessionManagerFilter::decodeHeaders(Http::HeaderMap &h
     auto binding = headers.get(Http::LowerCaseString(config_.binding()));
     if (binding) {
       auto bindingValue = std::string(binding->value().c_str());
-      // Remove quotes
-      auto bindingValueStripped = bindingValue.substr(1, bindingValue.length() - 2);
-      auto verified = session_manager_->VerifyToken(token, bindingValueStripped);
+      auto verified = session_manager_->VerifyToken(token, bindingValue);
       if (verified) {
         encodeToken(headers, token);
         return Http::FilterHeadersStatus::Continue;
@@ -76,12 +74,12 @@ Http::FilterHeadersStatus SessionManagerFilter::decodeHeaders(Http::HeaderMap &h
   return Http::FilterHeadersStatus::Continue;
 }
 
-Http::FilterDataStatus SessionManagerFilter::decodeData(Buffer::Instance &, bool) {
+Http::FilterDataStatus SessionManagerFilter::decodeData(Buffer::Instance&, bool) {
   ENVOY_LOG(trace, "{}", __func__);
   return Http::FilterDataStatus::Continue;
 }
 
-Http::FilterTrailersStatus SessionManagerFilter::decodeTrailers(Http::HeaderMap &) {
+Http::FilterTrailersStatus SessionManagerFilter::decodeTrailers(Http::HeaderMap&) {
   ENVOY_LOG(trace, "{}", __func__);
   return Http::FilterTrailersStatus::Continue;
 }
