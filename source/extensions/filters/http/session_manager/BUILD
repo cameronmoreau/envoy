@@ -6,7 +6,7 @@ load(
 )
 
 envoy_cc_library(
-    name = "session_manager_factory_lib",
+    name = "config",
     srcs = ["session_manager_factory.cc"],
     deps = [
         "//source/extensions/filters/http:well_known_names",
