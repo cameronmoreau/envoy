@@ -149,7 +149,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersMissingBinding) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
     auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_header().name()));
-  EXPECT_EQ(authz, nullptr);
+    EXPECT_EQ(authz, nullptr);
   }
 };
 

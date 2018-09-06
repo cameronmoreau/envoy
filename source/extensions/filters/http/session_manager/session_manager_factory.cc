@@ -3,7 +3,7 @@
 #include "envoy/config/filter/http/session_manager/v1alpha/config.pb.validate.h"
 #include "envoy/registry/registry.h"
 
-#include "extensions/filters/http/session_manager/filter.h"
+#include "extensions/filters/http/session_manager/session_manager_factory.h"
 #include "extensions/filters/http/common/session_manager.h"
 
 using ::envoy::config::filter::http::session_manager::v1alpha::SessionManager;

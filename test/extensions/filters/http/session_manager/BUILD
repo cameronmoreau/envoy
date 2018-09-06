@@ -25,3 +25,16 @@ envoy_extension_cc_test(
         "//test/test_common:utility_lib",
     ],
 )
+
+envoy_extension_cc_test(
+    name = "session_manager_factory_test",
+    srcs = [
+        "session_manager_factory_test.cc",
+    ],
+    extension_name = "envoy.filters.http.session_manager",
+    deps = [
+        "//source/extensions/filters/http/session_manager:session_manager_factory_lib",
+        "//test/mocks/server:server_mocks",
+        "//test/test_common:utility_lib",
+    ],
+)
