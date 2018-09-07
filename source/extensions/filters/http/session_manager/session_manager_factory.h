@@ -21,7 +21,7 @@ class FilterFactory : public Common::FactoryBase<
 
  private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const ::envoy::config::filter::http::session_manager::v2alpha::SessionManager& proto_config,
+      const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& proto_config,
       const std::string& stats_prefix, Server::Configuration::FactoryContext& context) override;
 };
 

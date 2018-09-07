@@ -8,8 +8,11 @@ load(
 envoy_cc_library(
     name = "config",
     srcs = ["session_manager_factory.cc"],
+    hdrs = ["session_manager_factory.h"],
     deps = [
+        "//include/envoy/registry",
         "//source/extensions/filters/http:well_known_names",
+        "//source/extensions/filters/http/common:factory_base_lib",
         "//source/extensions/filters/http/session_manager:session_manager_filter_lib",
         "@envoy_api//envoy/config/filter/http/session_manager/v1alpha:session_manager_cc",
     ],

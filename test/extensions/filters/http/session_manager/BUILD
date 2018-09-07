@@ -33,8 +33,9 @@ envoy_extension_cc_test(
     ],
     extension_name = "envoy.filters.http.session_manager",
     deps = [
-        "//source/extensions/filters/http/session_manager:session_manager_factory_lib",
+        "//source/extensions/filters/http/session_manager:config",
         "//test/mocks/server:server_mocks",
         "//test/test_common:utility_lib",
+        "@envoy_api//envoy/config/filter/http/session_manager/v1alpha:session_manager_cc",
     ],
 )

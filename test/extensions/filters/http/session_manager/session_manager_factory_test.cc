@@ -1,4 +1,5 @@
 #include "extensions/filters/http/session_manager/session_manager_factory.h"
+#include "envoy/config/filter/http/session_manager/v1alpha/config.pb.validate.h"
 
 #include "test/mocks/server/mocks.h"
 
@@ -46,9 +47,8 @@ class SessionManagerFactoryTest : public ::testing::Test {
 };
 
 TEST_F(SessionManagerFactoryTest, createFilter) {
-  MessageUtil::loadFromYaml(exampleConfig, proto_config_);
-  EXPECT_NO_THROW(filter_->onDestroy());
-  EXPECT_NO_THROW(filter_->onDestroy());
+  MessageUtil::loadFromYamlAndValidate(exampleConfigWithPreamble, proto_config_);
+  EXPECT_NO_THROW(factory_->createFilterFactoryFromProto(proto_config_, "prefix", context_));
 };
 
 } // namespace SessionManager
