@@ -1,0 +1,38 @@
+
+syntax = "proto3";
+
+package envoy.config.filter.http.oidc.v1alpha;
+
+import "validate/validate.proto";
+import "envoy/api/v2/core/http_uri.proto";
+
+// This message specifies the configuration of an OpenID Connect Client or relying-party (RP).
+// See https://openid.net/specs/openid-connect-core-1_0.html for more details.
+//
+// Example:
+//
+// .. code-block:: yaml
+//
+//     authorization_endpoint:
+//       uri: https://acme-idp.com/authorization
+//       cluster: authz
+//
+// [#not-implemented-hide:]
+message OidcClient {
+  // The authorization endpoint where a user can be authenticated.
+  envoy.api.v2.core.HttpUri authorization_endpoint = 1;
+  // The token endpoint where authorizaion and ID tokens can be redeemed.
+  envoy.api.v2.core.HttpUri token_endpoint = 2;
+  // The JWKS endpoint where an OpenID Connect provider's signing keys can be obtained.
+  envoy.api.v2.core.HttpUri jwks_endpoint = 1;
+  // The unique client identity.
+  string client_id = 2 [(validate.rules).string.min_bytes = 1];
+  // The shared client secret. This field is security sensitive.
+  string client_secret = 3 [(validate.rules).string.min_bytes = 1];
+}
+
+message OidcConfig {
+  
+  OidcClient client = 1;
+}
+
