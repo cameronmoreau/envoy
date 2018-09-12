@@ -5,6 +5,7 @@ package envoy.config.filter.http.oidc.v1alpha;
 
 import "validate/validate.proto";
 import "envoy/api/v2/core/http_uri.proto";
+import "envoy/config/filter/http/session_manager/v1alpha/config.proto";
 
 // This message specifies the configuration of an OpenID Connect Client or relying-party (RP).
 // See https://openid.net/specs/openid-connect-core-1_0.html for more details.
@@ -31,8 +32,14 @@ message OidcClient {
   string client_secret = 3 [(validate.rules).string.min_bytes = 1];
 }
 
+// This message specifies the configuration of an OpenID Connect filter that allows:
+//   1) Envoy to act as a client in the Authorization Code Flow (https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth) so to
+//     a) Acquire transparently or otherwise an identity token representing an end-user.
+//     b) Use acquired identity tokens as session tokens.
+//     c) The generation of a session protection cookie called a binding to mitigate cross-site request forgery and Person-in-the-browser
+//        (PiTB, MiTB) attacks.
 message OidcConfig {
-  
   OidcClient client = 1;
+  envoy.config.filter.http.session_manager.v1alpha.TokenBinding binding =2;
 }
 

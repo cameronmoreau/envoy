@@ -5,7 +5,7 @@ package envoy.config.filter.http.session_manager.v1alpha;
 
 import "validate/validate.proto";
 
-// This message specifies how a token can be mapped in an HTTP header.
+// This message specifies how a token can be mapped into an HTTP header.
 //
 // Example:
 //
@@ -24,6 +24,30 @@ message ForwardRule {
   string preamble = 2 [(validate.rules).string.min_bytes = 1];
 }
 
+
+// This message specifies the configuation needed to enable both the generation
+// and validation of session binding tokens to provide cross-site request forgery protection.
+//
+// Example:
+//
+// .. code-block:: yaml
+//
+//     secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+//     token: __Secure-acme-session-cookie
+//     binding: x-xsrf-token
+//
+// [#not-implemented-hide:]
+message TokenBinding {
+  // The 256-bit base64 encoded shared secret used to validate cryptographic session token bindings.
+  string secret = 1 [(validate.rules).string.min_bytes = 44, (validate.rules).string.max_bytes = 44];
+  // The name of the session token cookie. It is recommended that this value start with
+  // the string "__Secure-" as described at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie.
+  string token = 2;
+  // The name of the header that includes the cryptographic session token binding. A good choices for this field are
+  // x-xsrf-token or x-csrf-token
+  string binding = 3;
+}
+
 // This message specifies the configuration of a Session Manager filter that
 // can be used to extract, validate and forward session tokens. It is expected
 // that a secure transport is used (HTTPS), the token cookie has appropriate
@@ -34,9 +58,10 @@ message ForwardRule {
 //
 // .. code-block:: yaml
 //
-//     secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
-//     token: __Secure-acme-session-cookie
-//     binding: x-xsrf-token
+//     token_binding:
+//       secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+//       token: __Secure-acme-session-cookie
+//       binding: x-xsrf-token
 //     forward_header:
 //       name: authorization
 //       preamble: Bearer
@@ -44,12 +69,7 @@ message ForwardRule {
 // [#not-implemented-hide:]
 message SessionManager {
   // The 256-bit base64 encoded shared secret used to validate cryptographic session token bindings.
-  string secret = 1 [(validate.rules).string.min_bytes = 44, (validate.rules).string.max_bytes = 44];
-  // The name of the cookie that contains a session token. It is recommended that this value start with
-  // the string "__Secure-" as described at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie.
-  string token = 2;
-  // The name of the header that includes the cryptographic session token binding.
-  string binding = 3;
+  TokenBinding token_binding = 1;
   // The header that the session token should be forwarded in.
-  ForwardRule forward_header = 4;
+  ForwardRule forward_header = 2;
 }

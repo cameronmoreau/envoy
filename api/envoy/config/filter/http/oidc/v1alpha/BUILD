@@ -5,4 +5,5 @@ load("//bazel:api_build_system.bzl", "api_proto_library_internal")
 api_proto_library_internal(
     name = "oidc",
     srcs = ["config.proto"],
+    deps["//envoy/config/filter/http/oidc/v1alpha:session_manager"],
 )
