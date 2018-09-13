@@ -16,7 +16,15 @@ import "envoy/config/filter/http/session_manager/v1alpha/config.proto";
 //
 //     authorization_endpoint:
 //       uri: https://acme-idp.com/authorization
-//       cluster: authz
+//       cluster: tenant1-cluster
+//     token_endpoint:
+//       uri: https://acme-idp.com/token
+//       cluster: tenant1-cluster
+//     jwks_uri:
+//       uri: https://acme-idp.com/.well-known/jwks
+//       cluster: tenant1-cluster
+//     client_id: client-10
+//     client_secret: ABCDEF0123456789
 //
 // [#not-implemented-hide:]
 message OidcClient {
@@ -25,21 +33,111 @@ message OidcClient {
   // The token endpoint where authorizaion and ID tokens can be redeemed.
   envoy.api.v2.core.HttpUri token_endpoint = 2;
   // The JWKS endpoint where an OpenID Connect provider's signing keys can be obtained.
-  envoy.api.v2.core.HttpUri jwks_endpoint = 1;
+  envoy.api.v2.core.HttpUri jwks_uri = 3;
   // The unique client identity.
-  string client_id = 2 [(validate.rules).string.min_bytes = 1];
+  string client_id = 4 [(validate.rules).string.min_bytes = 1];
   // The shared client secret. This field is security sensitive.
-  string client_secret = 3 [(validate.rules).string.min_bytes = 1];
+  string client_secret = 5 [(validate.rules).string.min_bytes = 1];
+}
+
+// A Match maps an incoming request to an IdP based on a specified header field and it's value.
+//
+// Example:
+//
+// .. code-block:: yaml
+//
+//     idP:
+//       authorization_endpoint:
+//         uri: https://acme-idp.com/authorization
+//         cluster: tenant1-cluster
+//       token_endpoint:
+//         uri: https://acme-idp.com/token
+//         cluster: tenant1-cluster
+//       jwks_uri:
+//         uri: https://acme-idp.com/.well-known/jwks
+//         cluster: tenant1-cluster
+//       client_id: client-10
+//       client_secret: ABCDEF0123456789
+//     criteria:
+//       header: ":authority"
+//       value: "tenant1.acme.com"
+//
+// [#not-implemented-hide:]
+message Match {
+  // Criteria for mapping incoming requests to an IdP.
+  message criteria {
+    // Match by 1) a header and 2) the value of the header
+    string header = 1;
+    string value = 2;
+  }
+  // Details of the registered external OpenID Connect Identity Provider (IdP).
+  OidcClient idp = 1;
+  // Criteria by which to match against
+  Criteria criteria = 2;
 }
 
 // This message specifies the configuration of an OpenID Connect filter that allows:
 //   1) Envoy to act as a client in the Authorization Code Flow (https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth) so to
-//     a) Acquire transparently or otherwise an identity token representing an end-user.
-//     b) Use acquired identity tokens as session tokens.
-//     c) The generation of a session protection cookie called a binding to mitigate cross-site request forgery and Person-in-the-browser
+//     a) Ascertain an identity provider for authenticating the user based on an HTTP header.
+//     b) Acquire transparently or otherwise an identity token representing an end-user.
+//     c) Use acquired identity tokens as session tokens.
+//     d) The generation of a session protection cookie called a binding to mitigate cross-site request forgery and Person-in-the-browser
 //        (PiTB, MiTB) attacks.
+//
+// Example:
+//
+// .. code-block:: yaml
+//
+//     matches:
+//       tenant1.acme.com:
+//         idp:
+//           authorization_endpoint:
+//             uri: https://acme-idp.com/authorization
+//             cluster: tenant1-cluster
+//           token_endpoint:
+//             uri: https://acme-idp.com/token
+//             cluster: tenant1-cluster
+//           jwks_uri:
+//             uri: https://acme-idp.com/.well-known/jwks
+//             cluster: tenant1-cluster
+//           client_id: client-10
+//           client_secret: ABCDEF0123456789
+//         criteria:
+//           header: :authority
+//           value: tenant1.acme.com
+//       tenant2.acme.com:
+//         idp:
+//           authorization_endpoint:
+//             uri: https://acme-idp.com/authorization
+//             cluster: tenant1-cluster
+//           token_endpoint:
+//             uri: https://acme-idp.com/token
+//             cluster: tenant1-cluster
+//           jwks_uri:
+//             uri: https://acme-idp.com/.well-known/jwks
+//             cluster: tenant2-cluster
+//           client_id: client-26
+//           client_secret: 0123456789ABCDEF
+//         criteria:
+//           header: x-custom-host
+//           value: tenant2.acme.com
+//     authentication_callback: "/.authenticate"
+//     landing_page: "/home"
+//     token_binding:
+//       secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+//       token: __Secure-acme-session-cookie
+//       binding: x-xsrf-token
+//
+// [#not-implemented-hide:]
 message OidcConfig {
-  OidcClient client = 1;
-  envoy.config.filter.http.session_manager.v1alpha.TokenBinding binding =2;
+  // An ordered map of Match rules which map a request to an IDP.
+  // If a request can be matched by more than rule then the first in the list will be chosen.
+  map<string, Match> matches = 1;
+  // The path that receives an authentication reply from an OIDC provider. Values for this should be chosen to be unique
+  // so not to clash with services being fronted.
+  string authentication_callback = 2;
+  // The landing page to redirect to after successful authentication.
+  string landing_page = 3;
+  // Session token configuration.
+  envoy.config.filter.http.session_manager.v1alpha.TokenBinding binding = 4;
 }
-
