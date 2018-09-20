@@ -15,17 +15,17 @@ namespace SessionManager {
  * Config registration for session_manager filter.
  */
 class FilterFactory : public Common::FactoryBase<
-    ::envoy::config::filter::http::session_manager::v1alpha::SessionManager> {
- public:
+                          ::envoy::config::filter::http::session_manager::v1alpha::SessionManager> {
+public:
   FilterFactory() : FactoryBase(HttpFilterNames::get().SessionManager) {}
 
- private:
+private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
       const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& proto_config,
       const std::string& stats_prefix, Server::Configuration::FactoryContext& context) override;
 };
 
-} // namespace JwtAuthn
+} // namespace SessionManager
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy

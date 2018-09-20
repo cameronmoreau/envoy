@@ -35,13 +35,13 @@ public:
   virtual ~SessionManager(){};
   /* CreateToken creates a cryptographically protected token bound to the given context.
    * This function is thread-safe.
-   * @param ctx the value to be bound.
+   * @param ctx_ the value to be bound.
    * @return the binding token.
    */
   virtual SessionToken CreateToken(const Context& ctx) const PURE;
   /* VerifyToken verify that the given token is bound to the given context
    * This function is thread-safe.
-   * @param ctx the value that should be bound.
+   * @param ctx_ the value that should be bound.
    * @param token the bindind token.
    * @return true or false.
    */

@@ -18,7 +18,7 @@ type KV struct {
 	store map[string]string
 }
 
-func (k *KV) Get(ctx context.Context, in *kv.GetRequest) (*kv.GetResponse, error) {
+func (k *KV) Get(ctx_ context.Context, in *kv.GetRequest) (*kv.GetResponse, error) {
 	log.Printf("get: %s", in.Key)
 	resp := new(kv.GetResponse)
 	if val, ok := k.store[in.Key]; ok {
@@ -28,7 +28,7 @@ func (k *KV) Get(ctx context.Context, in *kv.GetRequest) (*kv.GetResponse, error
 	return resp, nil
 }
 
-func (k *KV) Set(ctx context.Context, in *kv.SetRequest) (*kv.SetResponse, error) {
+func (k *KV) Set(ctx_ context.Context, in *kv.SetRequest) (*kv.SetResponse, error) {
 	log.Printf("set: %s = %s", in.Key, in.Value)
 	k.Lock()
 	defer k.Unlock()

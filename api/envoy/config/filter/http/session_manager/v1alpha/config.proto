@@ -71,5 +71,5 @@ message SessionManager {
   // The 256-bit base64 encoded shared secret used to validate cryptographic session token bindings.
   TokenBinding token_binding = 1;
   // The header that the session token should be forwarded in.
-  ForwardRule forward_header = 2;
+  ForwardRule forward_rule = 2;
 }

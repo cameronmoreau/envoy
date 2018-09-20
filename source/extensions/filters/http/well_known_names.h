@@ -50,6 +50,8 @@ public:
   const std::string SessionManager = "envoy.filters.http.session_manager";
   // Header to metadata filter
   const std::string HeaderToMetadata = "envoy.filters.http.header_to_metadata";
+  // OpenID Connect filter
+  const std::string OpenIDConnect = "envoy.filters.http.oidc";
 
   // Converts names from v1 to v2
   const Config::V1Converter v1_converter_;

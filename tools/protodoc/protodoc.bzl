@@ -54,7 +54,7 @@ def _proto_doc_aspect_impl(target, ctx):
         if import_path:
             import_paths += [import_path]
 
-    # The outputs live in the ctx.label's package root. We add some additional
+    # The outputs live in the ctx_.label's package root. We add some additional
     # path information to match with protoc's notion of path relative locations.
     outputs = [ctx.actions.declare_file(ctx.label.name + "/" + _proto_path(f) +
                                         ".rst") for f in proto_sources]

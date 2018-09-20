@@ -15,19 +15,21 @@ namespace HttpFilters {
 namespace SessionManager {
 namespace {
 const char exampleConfigWithPreamble[] = R"(
-secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
-token: __Secure-acme-session-cookie
-binding: x-xsrf-token
-forward_header:
+token_binding:
+  secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+  token: __Secure-acme-session-cookie
+  binding: x-xsrf-token
+forward_rule:
   name: authorization
   preamble: Bearer
 )";
 
 const char exampleConfigNoPreamble[] = R"(
-secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
-token: __Secure-acme-session-cookie
-binding: x-xsrf-token
-forward_header:
+token_binding:
+  secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+  token: __Secure-acme-session-cookie
+  binding: x-xsrf-token
+forward_rule:
   name: authorization
 )";
 } // namespace

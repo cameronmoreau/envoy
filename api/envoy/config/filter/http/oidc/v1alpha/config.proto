@@ -40,7 +40,7 @@ message OidcClient {
   string client_secret = 5 [(validate.rules).string.min_bytes = 1];
 }
 
-// A Match maps an incoming request to an IdP based on a specified header field and it's value.
+// A Match maps an incoming request to an IdP based on a specified HTTP header and it's value.
 //
 // Example:
 //
@@ -80,8 +80,8 @@ message Match {
 //   1) Envoy to act as a client in the Authorization Code Flow (https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth) so to
 //     a) Ascertain an identity provider for authenticating the user based on an HTTP header.
 //     b) Acquire transparently or otherwise an identity token representing an end-user.
-//     c) Use acquired identity tokens as session tokens.
-//     d) The generation of a session protection cookie called a binding to mitigate cross-site request forgery and Person-in-the-browser
+//     c) Derive from the acquired identity token a set of session tokens.
+//     d) The generation of a session protection cookie, called a binding, to mitigate cross-site request forgery and Person-in-the-browser
 //        (PiTB, MiTB) attacks.
 //
 // Example:
@@ -119,9 +119,9 @@ message Match {
 //           client_id: client-26
 //           client_secret: 0123456789ABCDEF
 //         criteria:
-//           header: x-custom-host
+//           header: x-custom-header
 //           value: tenant2.acme.com
-//     authentication_callback: "/.authenticate"
+//     authentication_callback: "/oidc/authenticate"
 //     landing_page: "/home"
 //     token_binding:
 //       secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
@@ -130,11 +130,12 @@ message Match {
 //
 // [#not-implemented-hide:]
 message OidcConfig {
-  // An ordered map of Match rules which map a request to an IDP.
+  // An ordered map of Match rules which maps a request to an IDP.
   // If a request can be matched by more than rule then the first in the list will be chosen.
   map<string, Match> matches = 1;
-  // The path that receives an authentication reply from an OIDC provider. Values for this should be chosen to be unique
-  // so not to clash with services being fronted.
+  // The path that receives an authentication reply from an OIDC provider.
+  // Values for this should be chosen to be unique and so not to clash with services being fronted.
+  // The value of this field should be an absolute path value and not include a host or port specifier.
   string authentication_callback = 2;
   // The landing page to redirect to after successful authentication.
   string landing_page = 3;

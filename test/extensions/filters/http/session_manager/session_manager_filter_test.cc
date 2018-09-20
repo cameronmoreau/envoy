@@ -15,19 +15,21 @@ namespace HttpFilters {
 namespace SessionManager {
 namespace {
 const char exampleConfig[] = R"(
-secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
-token: __Secure-acme-session-cookie
-binding: x-xsrf-token
-forward_header:
+token_binding:
+  secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+  token: __Secure-acme-session-cookie
+  binding: x-xsrf-token
+forward_rule:
   name: authorization
   preamble: Bearer
 )";
 
 const char exampleConfigNoPreamble[] = R"(
-secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
-token: __Secure-acme-session-cookie
-binding: x-xsrf-token
-forward_header:
+token_binding:
+  secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
+  token: __Secure-acme-session-cookie
+  binding: x-xsrf-token
+forward_rule:
   name: authorization
 )";
 } // namespace
@@ -61,7 +63,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersNoCookies) {
   auto headers = Http::TestHeaderMapImpl{};
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
-  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_header().name()));
+  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_rule().name()));
   EXPECT_EQ(authz, nullptr);
 };
 
@@ -87,7 +89,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersSafeMethod) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
 
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_header().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
     EXPECT_NE(authz, nullptr);
     EXPECT_STREQ(authz->value().c_str(), "Bearer 1234567890");
   }
@@ -103,7 +105,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersPreamble) {
   };
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
-  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_header().name()));
+  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_rule().name()));
   EXPECT_NE(authz, nullptr);
   EXPECT_STREQ(authz->value().c_str(), "Bearer 1234567890");
 };
@@ -118,7 +120,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersNoPreamble) {
   };
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
-  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_header().name()));
+  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_rule().name()));
   EXPECT_NE(authz, nullptr);
   EXPECT_STREQ(authz->value().c_str(), "1234567890");
 };
@@ -148,7 +150,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersMissingBinding) {
   for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_header().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
     EXPECT_EQ(authz, nullptr);
   }
 };
@@ -182,7 +184,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersInvalidBinding) {
   for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "invalid")).WillOnce(testing::Return(false));
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_header().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
     EXPECT_EQ(authz, nullptr);
   }
 };
@@ -216,7 +218,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersValidBinding) {
   for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "valid")).WillOnce(testing::Return(true));
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_header().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
     EXPECT_NE(authz, nullptr);
     EXPECT_STREQ(authz->value().c_str(), "1234567890");
   }

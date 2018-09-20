@@ -1,26 +1,27 @@
 #pragma once
 
-#include <mutex>
 #include <string>
 
+#include "envoy/config/filter/http/session_manager/v1alpha/config.pb.h"
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
 
 #include "common/common/logger.h"
 
 #include "extensions/filters/http/common/session_manager.h"
-#include "envoy/config/filter/http/session_manager/v1alpha/config.pb.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace SessionManager {
 
- class SessionManagerFilter : public Http::StreamDecoderFilter, public Logger::Loggable<Logger::Id::filter> {
- public:
-  SessionManagerFilter(Upstream::ClusterManager &cluster_manager,
-                       const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager &config,
-                       Common::SessionManagerPtr session_manager);
+class SessionManagerFilter : public Http::StreamDecoderFilter,
+                             public Logger::Loggable<Logger::Id::filter> {
+public:
+  SessionManagerFilter(
+      Upstream::ClusterManager& cluster_manager,
+      const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& config,
+      Common::SessionManagerPtr session_manager);
 
   ~SessionManagerFilter();
 
@@ -36,11 +37,11 @@ namespace SessionManager {
   /* Decoder configuration. */
   void setDecoderFilterCallbacks(Http::StreamDecoderFilterCallbacks& callbacks) override;
 
- private:
+private:
   Upstream::ClusterManager& cluster_manager_;
   Common::SessionManagerPtr session_manager_;
   const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& config_;
-  Http::StreamDecoderFilterCallbacks *decoder_callbacks_ = nullptr;
+  Http::StreamDecoderFilterCallbacks* decoder_callbacks_ = nullptr;
 
   /**
    * Encode the given token according to the configuration.
@@ -52,4 +53,4 @@ namespace SessionManager {
 } // namespace SessionManager
 } // namespace HttpFilters
 } // namespace Extensions
-} // Envoy
+} // namespace Envoy
