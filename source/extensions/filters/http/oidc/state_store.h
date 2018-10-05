@@ -5,11 +5,12 @@
 #include <memory>
 #include <string>
 
+#include "common/common/base64.h"
 #include "envoy/common/pure.h"
 
 #include "openssl/crypto.h"
+#include "openssl/rand.h"
 
-// TODO: We need to clear up expired states asynchronously somewhere.
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
@@ -20,21 +21,51 @@ typedef std::shared_ptr<StateStore> StateStorePtr;
 class StateStore {
 public:
   typedef std::string state_handle_t;
-  struct StateContext {
-    typedef uint8_t Nonce[32];
-    std::string idp_;
-    std::string hostname_;
-    Nonce nonce_{};
-
-    StateContext() {}
-    StateContext(const std::string& idp, const std::string& hostname,
-                 const StateContext::Nonce& nonce)
-        : idp_(idp), hostname_(hostname) {
-      std::memcpy(nonce_, nonce, sizeof(nonce_));
+  struct Nonce {
+    uint8_t Value[32] {0};
+    Nonce() {
+      int rc = RAND_bytes(Value, sizeof(Value));
+      ASSERT(rc == 1);
     }
 
-    bool operator==(const StateContext& rhs) const {
-      return CRYPTO_memcmp(nonce_, rhs.nonce_, sizeof(StateContext::Nonce)) == 0;
+    explicit Nonce(const std::string& str) {
+      std::string tmp = Base64Url::decode(str);
+      if (tmp.length() == sizeof(Value)) {
+        memcpy(Value, tmp.c_str(), sizeof(Value));
+      }
+    }
+
+    Nonce& operator=(const Nonce& rhs) {
+      memcpy(Value, rhs.Value, sizeof(Value));
+      return *this;
+    }
+
+    bool operator ==(const Nonce& rhs) const {
+      return CRYPTO_memcmp(Value, rhs.Value, sizeof(Value)) == 0;
+    }
+
+    bool operator !=(const Nonce& rhs) const {
+      return !(*this == rhs);
+    }
+
+    std::string ToString() const {
+      return Base64Url::encode(reinterpret_cast<const char*>(Value), sizeof(Value));
+    }
+  };
+
+  struct StateContext {
+    std::string idp_;
+    std::string hostname_;
+    Nonce nonce_;
+
+    StateContext() {}
+    StateContext(const std::string& idp, const std::string& hostname)
+        : idp_(idp), hostname_(hostname) {
+
+    }
+
+    bool operator!=(const StateContext& rhs) const {
+      return !(idp_ == rhs.idp_ && hostname_ == rhs.hostname_ && nonce_ == rhs.nonce_);
     }
   };
   /**

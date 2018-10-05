@@ -22,7 +22,7 @@ Http::FilterFactoryCb FilterFactory::createFilterFactoryFromProtoTyped(
 }
 
 /**
- * Static registration for this jwt_authn filter. @see RegisterFactory.
+ * Static registration for this SessionManager filter. @see RegisterFactory.
  */
 static Registry::RegisterFactory<FilterFactory, Server::Configuration::NamedHttpFilterConfigFactory>
     register_;

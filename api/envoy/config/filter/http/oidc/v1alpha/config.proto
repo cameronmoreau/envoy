@@ -65,7 +65,7 @@ message OidcClient {
 // [#not-implemented-hide:]
 message Match {
   // Criteria for mapping incoming requests to an IdP.
-  message criteria {
+  message Criteria {
     // Match by 1) a header and 2) the value of the header
     string header = 1;
     string value = 2;

@@ -1,13 +1,10 @@
 #include <map>
 
 #include "common/common/assert.h"
-#include "common/common/base64.h"
 #include "common/common/lock_guard.h"
 #include "common/common/thread.h"
 
 #include "extensions/filters/http/oidc/state_store.h"
-
-#include "openssl/rand.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -93,7 +90,7 @@ private:
    * Generate a random context handle.
    */
   StateStore::state_handle_t randomHandle() const {
-    unsigned char random_data[32];
+    unsigned char random_data[16];
     int rc = RAND_bytes(random_data, sizeof(random_data));
     ASSERT(rc == 1);
     return Base64Url::encode(reinterpret_cast<char*>(random_data), sizeof(random_data));
