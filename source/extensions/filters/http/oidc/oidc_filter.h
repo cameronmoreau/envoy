@@ -37,7 +37,7 @@ class OidcFilter
       Upstream::ClusterManager &cluster_manager,
       Common::SessionManagerPtr session_manager,
       StateStorePtr state_store,
-      const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig& config,
+      std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
       CreateJwksFetcherCb fetcherCb);
   ~OidcFilter();
 
@@ -132,7 +132,7 @@ class OidcFilter
   std::string cluster_;
   Common::SessionManagerPtr session_manager_;
   StateStorePtr state_store_;
-  const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig& config_;
+  std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config_;
   CreateJwksFetcherCb fetcherCb_;
   Common::JwksFetcherPtr fetcher_ = {};
   RequestContext auth_request_ = {};

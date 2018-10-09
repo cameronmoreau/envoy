@@ -23,7 +23,7 @@ matches:
       value: tenant1.acme.com
 authentication_callback: "/oidc/authenticate"
 landing_page: "/home"
-token_binding:
+binding:
   secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
   token: __Secure-acme-session-cookie
   binding: x-xsrf-token

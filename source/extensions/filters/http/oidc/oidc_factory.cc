@@ -15,11 +15,12 @@ namespace {
 Http::FilterFactoryCb FilterFactory::createFilterFactoryFromProtoTyped(
     const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig& proto_config,
     const std::string&, Server::Configuration::FactoryContext& context) {
+  auto sharedConfig = std::make_shared<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig>(proto_config);
   auto sessionManagerPtr =
       Common::SessionManager::SessionManager::Create(proto_config.binding().secret());
-  return [this, &context, &proto_config, sessionManagerPtr](Http::FilterChainFactoryCallbacks& callbacks) -> void {
+  return [this, &context, sharedConfig, sessionManagerPtr](Http::FilterChainFactoryCallbacks& callbacks) -> void {
     callbacks.addStreamDecoderFilter(std::make_shared<OidcFilter>(
-        context.clusterManager(), sessionManagerPtr, state_store_, proto_config, Common::JwksFetcher::create));
+        context.clusterManager(), sessionManagerPtr, state_store_, sharedConfig, Common::JwksFetcher::create));
   };
 }
 

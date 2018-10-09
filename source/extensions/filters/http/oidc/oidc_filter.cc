@@ -142,7 +142,7 @@ OidcFilter::OidcFilter(
     Upstream::ClusterManager &cluster_manager,
     Common::SessionManagerPtr session_manager,
     StateStorePtr state_store,
-    const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig& config,
+    std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
     CreateJwksFetcherCb fetcherCb):
   cluster_manager_(cluster_manager),
   session_manager_(session_manager),
@@ -168,7 +168,7 @@ void OidcFilter::onDestroy() {
 void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::string& code) {
   ENVOY_LOG(trace, "{}", __func__);
   ENVOY_LOG(trace, "Attempting to redeem code {}, for idp {}", code, ctx.idp_);
-  const auto &matches = config_.matches();
+  const auto &matches = config_->matches();
   auto iter = matches.find(ctx.idp_);
   if(iter == matches.end()) {
     // Not an IdP we know about. This could happen due to eventual consistency when multiple envoy instances are
@@ -182,7 +182,7 @@ void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::stri
   Http::MessagePtr request = Http::Utility::prepareHeaders(idpRef.token_endpoint());
   request->headers().insertMethod().value(Http::Headers::get().MethodValues.Post);
   request->headers().insertContentType().value(std::string("application/x-www-form-urlencoded"));
-  auto endpoint = fmt::format("https://{}{}", ctx.hostname_, config_.authentication_callback());
+  auto endpoint = fmt::format("https://{}{}", ctx.hostname_, config_->authentication_callback());
   auto body = fmt::format("code={}&client_id={}&client_secret={}&redirect_uri={}&grant_type=authorization_code",
       code, idpRef.client_id(), idpRef.client_secret(), urlSafeEncode(endpoint));
   request->body().reset(new Buffer::OwnedImpl(body));
@@ -236,7 +236,7 @@ void OidcFilter::redirectToAuthenticationServer(const std::string &idp_name, con
   auto state = state_store_->create(ctx, authentictionResponseTimeout);
   // We need to construct our local authentication callback endpoint.
   std::ostringstream endpoint_stream;
-  endpoint_stream << "https://" << host << config_.authentication_callback();
+  endpoint_stream << "https://" << host << config_->authentication_callback();
   auto location = fmt::format("{}?response_type=code&scope=openid%20email&client_id={}&state={}&nonce={}&redirect_uri={}",
       idp.authorization_endpoint().uri(), idp.client_id(), state, ctx.nonce_.ToString(), urlSafeEncode(endpoint_stream.str()));
   sendRedirect(*decoder_callbacks_, location, Http::Code::Found);
@@ -282,7 +282,7 @@ Http::FilterHeadersStatus OidcFilter::decodeHeaders(Http::HeaderMap& headers, bo
     ENVOY_LOG(trace, "{} decoder headers with host: {}, dest: {}, method: {}", __func__, host->value().c_str(), destination->value().c_str(), method->value().c_str());
     auto destination_str = std::string(destination->value().c_str());
     // Is this for our authentication callback?
-    auto position = destination_str.find(config_.authentication_callback()); // TODO: There must be a better way to match urls?
+    auto position = destination_str.find(config_->authentication_callback()); // TODO: There must be a better way to match urls?
     if(position == 0) {
       handleAuthenticationResponse(method->value().c_str(), destination_str);
       ENVOY_LOG(trace, "{} decoder headers completed with outstanding token redemption", __func__);
@@ -294,12 +294,16 @@ Http::FilterHeadersStatus OidcFilter::decodeHeaders(Http::HeaderMap& headers, bo
       }
     } else {
       // Find a Match for the request
-      for(const auto &match : config_.matches()) {
+      ENVOY_LOG(trace, "{} {}", 1, config_->authentication_callback().c_str());
+      for(const auto &match : config_->matches()) {
+        ENVOY_LOG(trace, "{}", 2);
         const auto& criteriaRef = match.second.criteria();
         auto header = headers.get(Http::LowerCaseString(criteriaRef.header()));
+        ENVOY_LOG(trace, "{} {}", header->value().c_str(), criteriaRef.value());
         if(header && std::string(header->value().c_str()) == criteriaRef.value()) {
           ENVOY_LOG(trace, "{} request matches criteria {}:{}", __func__, criteriaRef.header(), criteriaRef.value());
           redirectToAuthenticationServer(match.first, match.second.idp(), host->value().c_str());
+          ENVOY_LOG(trace, "{}", 4);
           if (state_machine_ == state::replied) {
             return Http::FilterHeadersStatus::StopIteration;
           } else {
@@ -376,7 +380,7 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
     std::string bearerTokenValue = "Bearer " +  jwt_.jwt_;
     headers_->addCopy(Http::Headers::get().Authorization, bearerTokenValue);
     headers_->remove(Http::Headers::get().Path);
-    headers_->addCopy(Http::Headers::get().Path, config_.landing_page());
+    headers_->addCopy(Http::Headers::get().Path, config_->landing_page());
     if (state_machine_ == state::stopped) {
       decoder_callbacks_->continueDecoding();
     }
