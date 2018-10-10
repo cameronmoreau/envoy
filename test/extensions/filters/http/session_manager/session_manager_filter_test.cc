@@ -39,12 +39,11 @@ class SessionManagerFilterTest : public ::testing::Test {
   void SetUp() {
     session_manager_ = std::make_shared<Common::MockSessionManager>();
     session_manager_ptr_ = const_cast<Common::MockSessionManager*>(reinterpret_cast<const Common::MockSessionManager*>(session_manager_.get()));
-    filter_ = std::make_unique<SessionManagerFilter>(context_.cluster_manager_, proto_config_, session_manager_);
+    filter_ = std::make_unique<SessionManagerFilter>(proto_config_, session_manager_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
   ::envoy::config::filter::http::session_manager::v1alpha::SessionManager proto_config_;
-  NiceMock<Server::Configuration::MockFactoryContext> context_;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   std::unique_ptr<SessionManagerFilter> filter_;
   Common::SessionManagerPtr session_manager_;

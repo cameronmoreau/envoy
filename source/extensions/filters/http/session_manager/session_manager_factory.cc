@@ -11,13 +11,12 @@ namespace SessionManager {
 
 Http::FilterFactoryCb FilterFactory::createFilterFactoryFromProtoTyped(
     const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& proto_config,
-    const std::string&, Server::Configuration::FactoryContext& context) {
+    const std::string&, Server::Configuration::FactoryContext&) {
   auto sessionManagerPtr =
       Common::SessionManager::SessionManager::Create(proto_config.token_binding().secret());
-  return [&context, &proto_config,
+  return [&proto_config,
           sessionManagerPtr](Http::FilterChainFactoryCallbacks& callbacks) -> void {
-    callbacks.addStreamDecoderFilter(std::make_shared<SessionManagerFilter>(
-        context.clusterManager(), proto_config, sessionManagerPtr));
+    callbacks.addStreamDecoderFilter(std::make_shared<SessionManagerFilter>(proto_config, sessionManagerPtr));
   };
 }
 

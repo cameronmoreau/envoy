@@ -3,10 +3,6 @@
 
 #include "extensions/filters/http/session_manager/session_manager_filter.h"
 
-//#include "common/common/enum_to_int.h"
-//#include "common/common/hex.h"
-//#include "common/http/codes.h"
-//#include "common/http/message_impl.h"
 #include "common/http/utility.h"
 
 namespace Envoy {
@@ -22,10 +18,9 @@ const std::vector<std::string> httpSafeMethods = {
 }
 
 SessionManagerFilter::SessionManagerFilter(
-    Upstream::ClusterManager& cluster_manager,
     const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& config,
     Common::SessionManagerPtr session_manager)
-    : cluster_manager_(cluster_manager), session_manager_(session_manager), config_(config) {
+    : session_manager_(session_manager), config_(config) {
   ENVOY_LOG(trace, "{}", __func__);
 }
 

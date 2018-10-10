@@ -19,7 +19,6 @@ class SessionManagerFilter : public Http::StreamDecoderFilter,
                              public Logger::Loggable<Logger::Id::filter> {
 public:
   SessionManagerFilter(
-      Upstream::ClusterManager& cluster_manager,
       const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& config,
       Common::SessionManagerPtr session_manager);
 
@@ -38,7 +37,6 @@ public:
   void setDecoderFilterCallbacks(Http::StreamDecoderFilterCallbacks& callbacks) override;
 
 private:
-  Upstream::ClusterManager& cluster_manager_;
   Common::SessionManagerPtr session_manager_;
   const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& config_;
   Http::StreamDecoderFilterCallbacks* decoder_callbacks_ = nullptr;
