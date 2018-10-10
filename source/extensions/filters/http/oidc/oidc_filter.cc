@@ -1,5 +1,6 @@
 #include <chrono>
 #include <ctime>
+#include <exception>
 #include <string>
 
 
@@ -126,16 +127,16 @@ std::string OidcFilter::makeSetCookieValueHttpOnly(const std::string &name, cons
   // - Max-Age: provides a limited session time frame.
   // - Secure: instruct the user-agent (browser) to only send this cookie over a secure link.
   // - HttpOnly: instruct the user-agent (browser) to disallow access to this cookie from Javascript.
-  // - SameSite=strict: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.`
-  return fmt::format("{}=\"{}\"; Max-Age={}; Secure; HttpOnly; SameSite=strict", name, value, max_age);
+  // - SameSite=lax: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.`
+  return fmt::format("{}=\"{}\"; path=/; Max-Age={}; Secure; HttpOnly; SameSite=Lax", name, value, max_age);
 }
 
 std::string OidcFilter::makeSetCookieValue(const std::string &name, const std::string &value, int64_t max_age) {
   // We use the following cookie attributes for the following reasons:
   // - Max-Age: provides a limited session time frame.
   // - Secure: instruct the user-agent (browser) to only send this cookie over a secure link.
-  // - SameSite=strict: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.`
-  return fmt::format("{}=\"{}\"; Max-Age={}; Secure; SameSite=strict", name, value, max_age);
+  // - SameSite=lax: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.`
+  return fmt::format("{}=\"{}\"; path=/; Max-Age={}; Secure; SameSite=Lax", name, value, max_age);
 }
 
 OidcFilter::OidcFilter(
@@ -178,19 +179,23 @@ void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::stri
     state_machine_ = state::replied;
     return;
   }
-  auto idpRef = iter->second.idp();
-  Http::MessagePtr request = Http::Utility::prepareHeaders(idpRef.token_endpoint());
+  auto redirect = urlSafeEncode(fmt::format("https://{}{}", ctx.hostname_, config_->authentication_callback()));
+  Http::MessagePtr request = Http::Utility::prepareHeaders(iter->second.idp().token_endpoint());
   request->headers().insertMethod().value(Http::Headers::get().MethodValues.Post);
   request->headers().insertContentType().value(std::string("application/x-www-form-urlencoded"));
-  auto endpoint = fmt::format("https://{}{}", ctx.hostname_, config_->authentication_callback());
   auto body = fmt::format("code={}&client_id={}&client_secret={}&redirect_uri={}&grant_type=authorization_code",
-      code, idpRef.client_id(), idpRef.client_secret(), urlSafeEncode(endpoint));
+      code, iter->second.idp().client_id(), iter->second.idp().client_secret(), redirect);
   request->body().reset(new Buffer::OwnedImpl(body));
-  ENVOY_LOG(trace, "Sending async code redemption message ...");
   auth_request_.nonce = ctx.nonce_;
-  auth_request_.idp = &idpRef;
-  auth_request_.request = cluster_manager_.httpAsyncClientForCluster(idpRef.token_endpoint().cluster())
-    .send(std::move(request), *this, std::chrono::milliseconds(tokenRedemptionTimeout));
+  auth_request_.jwks_uri = iter->second.idp().jwks_uri();
+  try {
+    auth_request_.request = cluster_manager_.httpAsyncClientForCluster(iter->second.idp().token_endpoint().cluster())
+        .send(std::move(request), *this, tokenRedemptionTimeout);
+  } catch (const std::exception &e) {
+    ENVOY_LOG(trace, "Caught exception: {}", e.what());
+    throw;
+  }
+  ENVOY_LOG(trace, "Sent async code redemption message");
 }
 
 void OidcFilter::handleAuthenticationResponse(const std::string &method, const std::string &url) {
@@ -260,7 +265,7 @@ void OidcFilter::verifyIdToken(const std::string &token) {
     return;
   }
   fetcher_ = fetcherCb_(cluster_manager_);
-  fetcher_->fetch(auth_request_.idp->jwks_uri(), *this);
+  fetcher_->fetch(auth_request_.jwks_uri, *this);
 }
 
 Http::FilterHeadersStatus OidcFilter::decodeHeaders(Http::HeaderMap& headers, bool) {
@@ -339,11 +344,12 @@ Http::FilterHeadersStatus OidcFilter::encodeHeaders(Http::HeaderMap& headers, bo
     int64_t seconds_until_expiration = expiry(expiry_);
     // Expire cookie 30 seconds before the jwt.
     int64_t cookieLifetime = std::max(seconds_until_expiration - 30, int64_t(0));
-    auto xsrfToken = session_manager_->CreateToken(jwt_.jwt_);
-    auto xsrf = makeSetCookieValue(xsrfCookieName, xsrfToken, cookieLifetime);
+    ENVOY_LOG(trace, "OidcFilter {} lifetime", __func__, cookieLifetime);
+    //auto xsrfToken = session_manager_->CreateToken(jwt_.jwt_);
+    ///auto xsrf = makeSetCookieValue(xsrfCookieName, xsrfToken, cookieLifetime);
     auto cookie = makeSetCookieValueHttpOnly(tokenCookieName, jwt_.jwt_, cookieLifetime);
-    headers.addCopy(Http::Headers::get().SetCookie, xsrf);
     headers.addCopy(Http::Headers::get().SetCookie, cookie);
+    //headers.addCopy(Http::Headers::get().SetCookie, xsrf);
   }
   return Http::FilterHeadersStatus::Continue;
 }
@@ -376,14 +382,20 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
   } else {
     expiry_ = jwt_.exp_;
     ENVOY_LOG(debug, "{} Authentication complete, redirecting to landing page.", __func__);
-    // Rewrite request and forward to landing page including JWT.
-    std::string bearerTokenValue = "Bearer " +  jwt_.jwt_;
-    headers_->addCopy(Http::Headers::get().Authorization, bearerTokenValue);
-    headers_->remove(Http::Headers::get().Path);
-    headers_->addCopy(Http::Headers::get().Path, config_->landing_page());
-    if (state_machine_ == state::stopped) {
-      decoder_callbacks_->continueDecoding();
-    }
+    int64_t seconds_until_expiration = expiry(expiry_);
+    // Expire cookie 30 seconds before the jwt.
+    int64_t cookieLifetime = std::max(seconds_until_expiration - 30, int64_t(0));
+    auto xsrfToken = session_manager_->CreateToken(jwt_.jwt_);
+    auto xsrf = makeSetCookieValue(xsrfCookieName, xsrfToken, cookieLifetime);
+    auto cookie = makeSetCookieValueHttpOnly(tokenCookieName, jwt_.jwt_, cookieLifetime);
+    AdditionalHeaders_t headers = {
+        std::pair<const LowerCaseString&, std::string>{Http::Headers::get().SetCookie, xsrf},
+        std::pair<const LowerCaseString&, std::string>{Http::Headers::get().SetCookie, cookie},
+    };
+    sendRedirect(*decoder_callbacks_,
+                 config_->landing_page(),
+                 Http::Code::Found,
+                 headers);
     state_machine_ = state::setCookie;
   }
 }

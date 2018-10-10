@@ -24,7 +24,7 @@ namespace Oidc {
 typedef std::function<Common::JwksFetcherPtr(Upstream::ClusterManager&)> CreateJwksFetcherCb;
 
 class OidcFilter
- : public Http::StreamFilter,
+ : public Http::StreamFilter, // TODO: This is just a decoder stream filter
    public Common::JwksFetcher::JwksReceiver,
    public Http::AsyncClient::Callbacks,
    public Logger::Loggable<Logger::Id::filter> {
@@ -114,7 +114,7 @@ class OidcFilter
  private:
   struct RequestContext {
     Http::AsyncClient::Request* request;
-    const ::envoy::config::filter::http::oidc::v1alpha::OidcClient* idp;
+    ::envoy::api::v2::core::HttpUri jwks_uri;
     StateStore::Nonce nonce;
   };
 
