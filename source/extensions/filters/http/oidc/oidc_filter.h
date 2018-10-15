@@ -76,10 +76,10 @@ class OidcFilter
   /* onSuccess is used to handle oidc token responses verifying the success of a request
    * as well as token validity.
    * @param response the response to be verified.*/
-  void onSuccess(Http::MessagePtr&& response);
+  void onSuccess(Http::MessagePtr&& response) override;
   /* onFailure is used to handle oidc token request failures.
    * @param reason the reason an http request failed*/
-  void onFailure(Http::AsyncClient::FailureReason reason);
+  void onFailure(Http::AsyncClient::FailureReason reason) override;
 
   /* urlSafeEncode encodes the given parameter so that it can included as a query string in a url.
    * Ideally this function should be moved into utilities.h or replaced completely.
