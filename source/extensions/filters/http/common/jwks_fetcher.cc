@@ -11,6 +11,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Common {
 namespace {
+const std::string content_type {"application/json; charset=UTF-8"};
 class JwksFetcherImpl : public JwksFetcher,
                         public Fetcher::Receiver,
                         public Logger::Loggable<Logger::Id::filter> {
@@ -34,7 +35,7 @@ public:
     receiver_ = &receiver;
     fetcher_->fetch(uri,
                     Http::Headers::get().MethodValues.Get,
-                    Http::Headers::get().ContentTypeValues.Json,
+                    content_type,
                     "",
                     *this);
   }

@@ -1,3 +1,4 @@
+#include <iosfwd>
 #include "common/buffer/buffer_impl.h"
 #include "common/common/enum_to_int.h"
 #include "common/http/headers.h"

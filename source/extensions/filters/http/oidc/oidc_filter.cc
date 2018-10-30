@@ -230,7 +230,7 @@ void OidcFilter::handleAuthenticationResponse(const std::string &method, const s
         redeemCode(ctx, code->second);
       } else {
         // Unknown/unexpected state
-        ENVOY_LOG(info, "Invalid state in handleAuthenticationResponse");
+        ENVOY_LOG(info, "Invalid state in handleAuthenticationResponse {}", state->second);
         Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::BadRequest, Http::CodeUtility::toString(Http::Code::BadRequest), false);
         state_machine_ = state::replied;
       }
