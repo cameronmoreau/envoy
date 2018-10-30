@@ -39,7 +39,7 @@ public:
 
   // Following functions are for JwksFetcher::JwksReceiver interface
   void onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) override;
-  void onJwksError(Failure reason) override;
+  void onJwksFailure(Common::Failure reason) override;
   // Following functions are for Authenticator interface
   void verify(Http::HeaderMap& headers, std::vector<JwtLocationConstPtr>&& tokens,
               SetPayloadCallback set_payload_cb, AuthenticatorCallback callback) override;
@@ -206,7 +206,7 @@ void AuthenticatorImpl::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
   }
 }
 
-void AuthenticatorImpl::onJwksError(Failure) { doneWithStatus(Status::JwksFetchFail); }
+void AuthenticatorImpl::onJwksFailure(Common::Failure) { doneWithStatus(Status::JwksFetchFail); }
 
 void AuthenticatorImpl::onDestroy() {
   if (fetcher_) {

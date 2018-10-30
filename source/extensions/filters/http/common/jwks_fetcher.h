@@ -4,6 +4,8 @@
 #include "envoy/common/pure.h"
 #include "envoy/upstream/cluster_manager.h"
 
+#include "extensions/filters/http/common/fetcher.h"
+
 #include "jwt_verify_lib/jwks.h"
 
 namespace Envoy {
@@ -23,12 +25,6 @@ class JwksFetcher {
 public:
   class JwksReceiver {
   public:
-    enum class Failure {
-      Unknown,
-      Network,
-      InvalidJwks,
-    };
-
     virtual ~JwksReceiver(){};
     /*
      * Successful retrieval callback.

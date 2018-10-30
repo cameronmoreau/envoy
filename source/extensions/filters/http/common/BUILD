@@ -42,6 +42,18 @@ envoy_cc_library(
     deps = [
         "//include/envoy/upstream:cluster_manager_interface",
         "//source/common/http:utility_lib",
+        "//source/extensions/filters/http/common:fetcher_lib",
+        "@envoy_api//envoy/api/v2/core:http_uri_cc",
+    ],
+)
+
+envoy_cc_library(
+    name = "fetcher_lib",
+    srcs = ["fetcher.cc"],
+    hdrs = ["fetcher.h"],
+    deps = [
+        "//include/envoy/upstream:cluster_manager_interface",
+        "//source/common/http:utility_lib",
         "@envoy_api//envoy/api/v2/core:http_uri_cc",
     ],
 )

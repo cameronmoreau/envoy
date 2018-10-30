@@ -23,6 +23,21 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
+    name = "jwt_fetcher_lib",
+    srcs = ["jwt_fetcher.cc"],
+    hdrs = ["jwt_fetcher.h"],
+    external_deps = [
+        "jwt_verify_lib",
+    ],
+    deps = [
+        "//include/envoy/upstream:cluster_manager_interface",
+        "//source/common/http:utility_lib",
+        "//source/extensions/filters/http/common:fetcher_lib",
+        "@envoy_api//envoy/api/v2/core:http_uri_cc",
+    ],
+)
+
+envoy_cc_library(
     name = "oidc_filter_lib",
     srcs = ["oidc_filter.cc"],
     hdrs = ["oidc_filter.h"],

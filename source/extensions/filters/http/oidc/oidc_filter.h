@@ -70,7 +70,7 @@ class OidcFilter
 
   // JwksFetcher::JwksReceiver interface methods
   void onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) override;
-  void onJwksError(Common::JwksFetcher::JwksReceiver::Failure reason) override;
+  void onJwksFailure(Common::Failure reason) override;
 
   // Http::AsyncClient::Callbacks
   /* onSuccess is used to handle oidc token responses verifying the success of a request

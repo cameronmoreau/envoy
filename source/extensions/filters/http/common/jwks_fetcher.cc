@@ -12,72 +12,54 @@ namespace HttpFilters {
 namespace Common {
 namespace {
 class JwksFetcherImpl : public JwksFetcher,
-                        public Logger::Loggable<Logger::Id::filter>,
-                        public Http::AsyncClient::Callbacks {
+                        public Fetcher::Receiver,
+                        public Logger::Loggable<Logger::Id::filter> {
 private:
-  Upstream::ClusterManager& cm_;
   JwksFetcher::JwksReceiver* receiver_ = nullptr;
-  const ::envoy::api::v2::core::HttpUri* uri_ = nullptr;
-  Http::AsyncClient::Request* request_ = nullptr;
+  FetcherPtr fetcher_;
 
 public:
-  JwksFetcherImpl(Upstream::ClusterManager& cm) : cm_(cm) { ENVOY_LOG(trace, "{}", __func__); }
-
-  void cancel() {
-    if (request_) {
-      request_->cancel();
-      request_ = nullptr;
-      ENVOY_LOG(debug, "fetch pubkey [uri = {}]: canceled", uri_->uri());
-    }
+  JwksFetcherImpl(Upstream::ClusterManager& cm) {
+    ENVOY_LOG(trace, "{}", __func__);
+    fetcher_ = Fetcher::create(cm);
   }
 
-  void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksFetcher::JwksReceiver& receiver) {
-    ENVOY_LOG(trace, "{} {}", __func__, uri.uri());
+  void cancel() {
+    ENVOY_LOG(trace, "{}", __func__);
+    fetcher_->cancel();
+  }
+
+  void fetch(const ::envoy::api::v2::core::HttpUri& uri, JwksFetcher::JwksReceiver& receiver) override {
+    ENVOY_LOG(trace, "{}", __func__);
     receiver_ = &receiver;
-    uri_ = &uri;
-    Http::MessagePtr message = Http::Utility::prepareHeaders(uri);
-    message->headers().insertMethod().value().setReference(Http::Headers::get().MethodValues.Get);
-    ENVOY_LOG(debug, "fetch pubkey from [uri = {}]: start", uri_->uri());
-    request_ =
-        cm_.httpAsyncClientForCluster(uri.cluster())
-            .send(std::move(message), *this,
-                  std::chrono::milliseconds(DurationUtil::durationToMilliseconds(uri.timeout())));
+    fetcher_->fetch(uri,
+                    Http::Headers::get().MethodValues.Get,
+                    Http::Headers::get().ContentTypeValues.Json,
+                    "",
+                    *this);
   }
 
   // HTTP async receive methods
-  void onSuccess(Http::MessagePtr&& response) {
+  void onFetchSuccess(Buffer::InstancePtr&& response) override {
     ENVOY_LOG(trace, "{}", __func__);
-    request_ = nullptr;
-    const uint64_t status_code = Http::Utility::getResponseStatus(response->headers());
-    if (status_code == enumToInt(Http::Code::OK)) {
-      ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: success", __func__, uri_->uri());
-      if (response->body()) {
-        const auto len = response->body()->length();
-        const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
-        auto jwks =
-            google::jwt_verify::Jwks::createFrom(body, google::jwt_verify::Jwks::Type::JWKS);
-        if (jwks->getStatus() == google::jwt_verify::Status::Ok) {
-          ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: succeeded", __func__, uri_->uri());
-          receiver_->onJwksSuccess(std::move(jwks));
-        } else {
-          ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: invalid jwks", __func__, uri_->uri());
-          receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::InvalidJwks);
-        }
-      } else {
-        ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: body is empty", __func__, uri_->uri());
-        receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::Network);
-      }
+    const auto len = response->length();
+    const auto body = std::string(static_cast<char *>(response->linearize(len)), len);
+    auto jwks =
+        google::jwt_verify::Jwks::createFrom(body, google::jwt_verify::Jwks::Type::JWKS);
+    if (jwks->getStatus() == google::jwt_verify::Status::Ok) {
+      ENVOY_LOG(debug, "{}: fetch pubkey: succeeded", __func__);
+      receiver_->onJwksSuccess(std::move(jwks));
     } else {
-      ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: response status code {}", __func__,
-                uri_->uri(), status_code);
-      receiver_->onJwksError(JwksFetcher::JwksReceiver::Failure::Network);
+      ENVOY_LOG(debug, "{}: fetch pubkey: invalid jwks", __func__);
+      std::cerr << "jwks 1" << std::endl;
+      receiver_->onJwksFailure(Failure::InvalidData);
     }
   }
 
-  void onFailure(Http::AsyncClient::FailureReason reason) {
-    ENVOY_LOG(debug, "{}: fetch pubkey [uri = {}]: network error {}", __func__, uri_->uri(),
+  void onFetchFailure(Failure reason) override {
+    ENVOY_LOG(debug, "{}: fetch pubkey: error {}", __func__,
               enumToInt(reason));
-    receiver_->onJwksFailure(JwksFetcher::JwksReceiver::Failure::network);
+    receiver_->onJwksFailure(Failure::network);
   }
 };
 } // namespace

@@ -16,3 +16,17 @@ envoy_extension_cc_test(
         "//test/test_common:utility_lib",
     ],
 )
+
+envoy_extension_cc_test(
+    name = "jwt_fetcher_test",
+    srcs = [
+        "jwt_fetcher_test.cc",
+    ],
+    extension_name = "envoy.filters.http.oidc",
+    deps = [
+        "//source/extensions/filters/http/common:jwt_fetcher_lib",
+        "//test/mocks/http:http_mocks",
+        "//test/mocks/server:server_mocks",
+        "//test/test_common:utility_lib",
+    ],
+)

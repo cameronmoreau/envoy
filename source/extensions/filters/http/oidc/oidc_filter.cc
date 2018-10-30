@@ -124,18 +124,20 @@ bool OidcFilter::isSupportedContentType(const LowerCaseString &got) {
 
 std::string OidcFilter::makeSetCookieValueHttpOnly(const std::string &name, const std::string &value, int64_t max_age) {
   // We use the following cookie attributes for the following reasons:
+  // - Path=/: allow use of cookie for all paths.
   // - Max-Age: provides a limited session time frame.
   // - Secure: instruct the user-agent (browser) to only send this cookie over a secure link.
   // - HttpOnly: instruct the user-agent (browser) to disallow access to this cookie from Javascript.
-  // - SameSite=lax: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.`
+  // - SameSite=lax: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.
   return fmt::format("{}=\"{}\"; path=/; Max-Age={}; Secure; HttpOnly; SameSite=Lax", name, value, max_age);
 }
 
 std::string OidcFilter::makeSetCookieValue(const std::string &name, const std::string &value, int64_t max_age) {
   // We use the following cookie attributes for the following reasons:
+  // - Path=/: allow use of cookie for all paths.
   // - Max-Age: provides a limited session time frame.
   // - Secure: instruct the user-agent (browser) to only send this cookie over a secure link.
-  // - SameSite=lax: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.`
+  // - SameSite=lax: instruct the user-agent (browser) to prevent 3rd-party site requests using this cookie.
   return fmt::format("{}=\"{}\"; path=/; Max-Age={}; Secure; SameSite=Lax", name, value, max_age);
 }
 
@@ -174,7 +176,7 @@ void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::stri
   if(iter == matches.end()) {
     // Not an IdP we know about. This could happen due to eventual consistency when multiple envoy instances are
     // deployed.
-    ENVOY_LOG(warn, "Received authentication response with unknown IdP: {}. ", ctx.idp_);
+    ENVOY_LOG(debug, "Received authentication response with unknown IdP: {}. ", ctx.idp_);
     Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::BadRequest, Http::CodeUtility::toString(Http::Code::BadRequest), false);
     state_machine_ = state::replied;
     return;
@@ -200,7 +202,7 @@ void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::stri
 
 void OidcFilter::handleAuthenticationResponse(const std::string &method, const std::string &url) {
   // Verify the authentication callback by:
-  // - extract and check the state is valid (this is an expected request.
+  // - extract and check the state is valid (this is an expected request).
   // - extract the authorization code and redeem  at the authorization token endpoint.
   if(Http::Headers::get().MethodValues.Get != method) {
     ENVOY_LOG(warn, "Received authentication response with incorrect method. Wanted: Get, received: {}", method);
@@ -400,10 +402,10 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
   }
 }
 
-void OidcFilter::onJwksError(Common::JwksFetcher::JwksReceiver::Failure reason) {
+void OidcFilter::onJwksFailure(Common::Failure reason) {
   ENVOY_LOG(trace, "OidcFilter {}", __func__);
   auth_request_.request = nullptr;
-  ENVOY_LOG(warn, "Failed to retrieve JWKS because {}.", static_cast<int>(reason));
+  ENVOY_LOG(warn, "Failed to retrieve JWKS because {}.", enumToInt(reason));
   Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::InternalServerError, Http::CodeUtility::toString(Http::Code::InternalServerError), false);
   state_machine_ = state::replied;
 }

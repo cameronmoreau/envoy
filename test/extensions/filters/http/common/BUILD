@@ -42,6 +42,21 @@ envoy_extension_cc_test(
 )
 
 envoy_extension_cc_test(
+    name = "fetcher_test",
+    srcs = [
+        "fetcher_test.cc",
+    ],
+    extension_name = "envoy.filters.http.jwt_authn",
+    deps = [
+        "//source/common/buffer:buffer_lib",
+        "//source/extensions/filters/http/common:fetcher_lib",
+        "//test/mocks/http:http_mocks",
+        "//test/mocks/server:server_mocks",
+        "//test/test_common:utility_lib",
+    ],
+)
+
+envoy_extension_cc_test(
     name = "session_manager_test",
     srcs = [
         "session_manager_test.cc",
