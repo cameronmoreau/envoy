@@ -12,7 +12,7 @@ MockUpstream::MockUpstream(Upstream::MockClusterManager& mock_cm, const std::str
           [this](Http::MessagePtr&, Http::AsyncClient::Callbacks& cb,
                  const absl::optional<std::chrono::milliseconds>&) -> Http::AsyncClient::Request* {
             Http::MessagePtr response_message(new Http::ResponseMessageImpl(
-                Http::HeaderMapPtr{new Http::TestHeaderMapImpl{{":status", status_}}}));
+                Http::HeaderMapPtr{new Http::TestHeaderMapImpl{{":status", status_}, {"content-type", "application/json; charset=UTF-8"}}}));
             if (response_body_.length()) {
               response_message->body().reset(new Buffer::OwnedImpl(response_body_));
             } else {
