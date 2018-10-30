@@ -59,7 +59,7 @@ public:
   void onFetchFailure(Failure reason) override {
     ENVOY_LOG(debug, "{}: fetch pubkey: error {}", __func__,
               enumToInt(reason));
-    receiver_->onJwksFailure(Failure::network);
+    receiver_->onJwksFailure(Failure::Network);
   }
 };
 } // namespace

@@ -34,7 +34,7 @@ public:
                     JwksCache& jwks_cache, Upstream::ClusterManager& cluster_manager,
                     CreateJwksFetcherCb create_jwks_fetcher_cb, TimeSource& time_source)
       : jwks_cache_(jwks_cache), cm_(cluster_manager),
-        create_jwks_fetcher_cb_(create_jwks_fetcher_cb), check_audience_(check_audience),
+        createJwksFetcherCb_(create_jwks_fetcher_cb), check_audience_(check_audience),
         provider_(provider), is_allow_failed_(allow_failed), time_source_(time_source) {}
 
   // Following functions are for JwksFetcher::JwksReceiver interface
@@ -62,12 +62,6 @@ private:
   JwksCache& jwks_cache_;
   // the cluster manager object.
   Upstream::ClusterManager& cm_;
-
-  // The callback used to create a JwksFetcher instance.
-  CreateJwksFetcherCb create_jwks_fetcher_cb_;
-
-  // The Jwks fetcher object
-  Common::JwksFetcherPtr fetcher_;
 
   // The callback used to create a JwksFetcher instance.
   CreateJwksFetcherCb createJwksFetcherCb_;
@@ -187,7 +181,7 @@ void AuthenticatorImpl::startVerify() {
   // jwks fetching can be shared by two requests.
   if (jwks_data_->getJwtProvider().has_remote_jwks()) {
     if (!fetcher_) {
-      fetcher_ = create_jwks_fetcher_cb_(cm_);
+      fetcher_ = createJwksFetcherCb_(cm_);
     }
     fetcher_->fetch(jwks_data_->getJwtProvider().remote_jwks().http_uri(), *this);
     return;
@@ -213,10 +207,6 @@ void AuthenticatorImpl::onDestroy() {
     fetcher_->cancel();
   }
 }
-
-void AuthenticatorImpl::onJwksError(Failure) { doneWithStatus(Status::JwksFetchFail); }
-
-void AuthenticatorImpl::onDestroy() { fetcher_->close(); }
 
 // Verify with a specific public key.
 void AuthenticatorImpl::verifyKey() {
