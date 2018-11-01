@@ -18,7 +18,7 @@ const std::vector<std::string> httpSafeMethods = {
 }
 
 SessionManagerFilter::SessionManagerFilter(
-    const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager& config,
+    std::shared_ptr<const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager> config,
     Common::SessionManagerPtr session_manager)
     : session_manager_(session_manager), config_(config) {
   ENVOY_LOG(trace, "{}", __func__);
@@ -29,15 +29,16 @@ SessionManagerFilter::~SessionManagerFilter() { ENVOY_LOG(trace, "{}", __func__)
 void SessionManagerFilter::onDestroy() { ENVOY_LOG(trace, "{}", __func__); }
 
 void SessionManagerFilter::encodeToken(Http::HeaderMap& headers, const std::string& token) {
-  auto encodedHeaderValue = config_.forward_rule().preamble().empty()
+  auto encodedHeaderValue = config_->forward_rule().preamble().empty()
                                 ? token
-                                : config_.forward_rule().preamble() + " " + token;
-  headers.addCopy(Http::LowerCaseString(config_.forward_rule().name()), encodedHeaderValue);
+                                : config_->forward_rule().preamble() + " " + token;
+  headers.addCopy(Http::LowerCaseString(config_->forward_rule().name()), encodedHeaderValue);
 }
 
 Http::FilterHeadersStatus SessionManagerFilter::decodeHeaders(Http::HeaderMap& headers, bool) {
-  ENVOY_LOG(trace, "{}", __func__);
-  auto token = Http::Utility::parseCookieValue(headers, config_.token_binding().token());
+  ENVOY_LOG(trace, "{} {}", __func__, config_->token_binding().token());
+  auto token = Http::Utility::parseCookieValue(headers, config_->token_binding().token());
+  ENVOY_LOG(trace, "{} {}", __func__, token);
   if (!token.empty()) {
     // If the http method is a safe method (that it is non-mutating) forgo binding validation.
     auto verb = std::string(headers.Method()->value().c_str());
@@ -49,7 +50,7 @@ Http::FilterHeadersStatus SessionManagerFilter::decodeHeaders(Http::HeaderMap& h
       return Http::FilterHeadersStatus::Continue;
     }
     // Any mutating or potentially mutating command requires binding validation.
-    auto binding = headers.get(Http::LowerCaseString(config_.token_binding().binding()));
+    auto binding = headers.get(Http::LowerCaseString(config_->token_binding().binding()));
     if (binding) {
       auto bindingValue = std::string(binding->value().c_str());
       auto verified = session_manager_->VerifyToken(token, bindingValue);
