@@ -25,7 +25,7 @@ public:
     fetcher_ = Fetcher::create(cm);
   }
 
-  void cancel() {
+  void cancel() override {
     ENVOY_LOG(trace, "{}", __func__);
     fetcher_->cancel();
   }

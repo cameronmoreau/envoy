@@ -10,7 +10,7 @@
 #include "common/http/codes.h"
 #include "common/http/utility.h"
 #include "common/http/message_impl.h"
-#include "external/envoy_api/envoy/config/filter/http/oidc/v1alpha/config.pb.h"
+#include "envoy/config/filter/http/oidc/v1alpha/config.pb.h"
 
 #include "openssl/crypto.h"
 
