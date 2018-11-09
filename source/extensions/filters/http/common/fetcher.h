@@ -53,12 +53,14 @@ class Fetcher {
    * Retrieve a resource from a remote HTTP host.
    * @param uri the uri to retrieve the jwks from.
    * @param method the HTTP method to use. Typically GET or POST. This reference must live longer than the request.
-   * @param content_type the Accept header value to send. This reference must live longer than the request.
+   * @param accept header value. This reference must live longer than the request. If empty no header is set.
+   * @param content_type header value. This reference must live longer than the request.
    * @param body the body of the request. GET requests must pass an empty string.
    * @param receiver the receiver of the fetched resource or error.
    */
   virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri,
                      const std::string& method,
+                     const std::string& accept,
                      const std::string& content_type,
                      const std::string& body,
                      Receiver& receiver) PURE;

@@ -550,5 +550,14 @@ TEST(HttpUtility, QueryParamsToString) {
             Utility::queryParamsToString(Utility::QueryParams({{"a", "1"}, {"b", "2"}})));
 }
 
+TEST(HttpUtility, UrlSafeEncode) {
+  static const char *input = R"RAW(abcdefghijklmnopqrstuvwxyz0123456789-._~!#$&'()*+,/:;=?@[])RAW";
+  static const std::string expected = "abcdefghijklmnopqrstuvwxyz0123456789-._~%21%23%24%26%27%28%29%2A%2B%2C%2F%3A%3B%3D%3F%40%5B%5D";
+
+  std::string encoded = Utility::urlSafeEncode(input);
+
+  EXPECT_EQ(expected, encoded);
+}
+
 } // namespace Http
 } // namespace Envoy

@@ -24,6 +24,29 @@
 
 namespace Envoy {
 namespace Http {
+namespace {
+  // See https://tools.ietf.org/html/rfc3986#section-2.2
+  const std::unordered_map<char,std::string> url_reserved_character_map = {
+      {'!', "%21"},
+      {'#', "%23"},
+      {'$', "%24"},
+      {'&', "%26"},
+      {'\'', "%27"},
+      {'(', "%28"},
+      {')', "%29"},
+      {'*', "%2A"},
+      {'+', "%2B"},
+      {',', "%2C"},
+      {'/', "%2F"},
+      {':', "%3A"},
+      {';', "%3B"},
+      {'=', "%3D"},
+      {'?', "%3F"},
+      {'@', "%40"},
+      {']', "%5B"},
+      {'[', "%5D"},
+  };
+} // namespace
 
 void Utility::appendXff(HeaderMap& headers, const Network::Address::Instance& remote_address) {
   if (remote_address.type() != Network::Address::Type::Ip) {
@@ -444,6 +467,19 @@ void Utility::transformUpgradeResponseFromH2toH1(HeaderMap& headers, absl::strin
     headers.insertConnection().value().setReference(Http::Headers::get().ConnectionValues.Upgrade);
     headers.insertStatus().value().setInteger(101);
   }
+}
+
+std::string Utility::urlSafeEncode(const std::string& url) {
+  std::stringstream builder;
+  for (auto character : url) {
+    const auto &iter = url_reserved_character_map.find(character);
+    if (iter !=  url_reserved_character_map.end()) {
+      builder << iter->second;
+    } else {
+      builder << character;
+    }
+  }
+  return builder.str();
 }
 
 } // namespace Http

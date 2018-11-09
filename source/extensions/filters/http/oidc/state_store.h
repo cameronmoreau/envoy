@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include "common/common/assert.h"
 #include "common/common/base64.h"
 #include "envoy/common/pure.h"
 
@@ -22,26 +23,30 @@ class StateStore {
 public:
   typedef std::string state_handle_t;
   struct Nonce {
-    uint8_t Value[32] {0};
+    typedef uint8_t NonceValue[32];
+    NonceValue Value {0};
     Nonce() {
-      int rc = RAND_bytes(Value, sizeof(Value));
-      ASSERT(rc == 1);
+      static const NonceValue zero = {0};
+      do {
+        int rc = RAND_bytes(Value, sizeof(NonceValue));
+        ASSERT(rc == 1);
+      } while(memcpy(Value, zero, sizeof(NonceValue)) == 0);
     }
 
     explicit Nonce(const std::string& str) {
       std::string tmp = Base64Url::decode(str);
-      if (tmp.length() == sizeof(Value)) {
-        memcpy(Value, tmp.c_str(), sizeof(Value));
+      if (tmp.length() == sizeof(NonceValue)) {
+        memcpy(Value, tmp.c_str(), sizeof(NonceValue));
       }
     }
 
     Nonce& operator=(const Nonce& rhs) {
-      memcpy(Value, rhs.Value, sizeof(Value));
+      memcpy(Value, rhs.Value, sizeof(NonceValue));
       return *this;
     }
 
     bool operator ==(const Nonce& rhs) const {
-      return CRYPTO_memcmp(Value, rhs.Value, sizeof(Value)) == 0;
+      return CRYPTO_memcmp(Value, rhs.Value, sizeof(NonceValue)) == 0;
     }
 
     bool operator !=(const Nonce& rhs) const {
@@ -49,7 +54,7 @@ public:
     }
 
     std::string ToString() const {
-      return Base64Url::encode(reinterpret_cast<const char*>(Value), sizeof(Value));
+      return Base64Url::encode(reinterpret_cast<const char*>(Value), sizeof(NonceValue));
     }
   };
 
@@ -65,7 +70,11 @@ public:
     }
 
     bool operator!=(const StateContext& rhs) const {
-      return !(idp_ == rhs.idp_ && hostname_ == rhs.hostname_ && nonce_ == rhs.nonce_);
+      return !(*this == rhs);
+    }
+
+    bool operator ==(const StateContext& rhs) const {
+      return (idp_ == rhs.idp_ && hostname_ == rhs.hostname_ && nonce_ == rhs.nonce_);
     }
   };
   /**

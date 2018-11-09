@@ -233,6 +233,14 @@ void transformUpgradeRequestFromH2toH1(HeaderMap& headers);
  */
 void transformUpgradeResponseFromH2toH1(HeaderMap& headers, absl::string_view upgrade);
 
+/**
+ * Using percent encoding (as defined in https://tools.ietf.org/html/rfc3986#section-2.1), transform the input value
+ * into a url-safe encoding with all reserved characters escaped.
+ * @param value the value to be encoded.
+ * @return a url-safe percent encoded variant of the input value.
+ */
+std::string urlSafeEncode(const std::string& url);
+
 } // namespace Utility
 } // namespace Http
 } // namespace Envoy

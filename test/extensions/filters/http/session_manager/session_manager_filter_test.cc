@@ -37,13 +37,14 @@ forward_rule:
 class SessionManagerFilterTest : public ::testing::Test {
  public:
   void SetUp() {
+    proto_config_ = std::make_shared<::envoy::config::filter::http::session_manager::v1alpha::SessionManager>();
     session_manager_ = std::make_shared<Common::MockSessionManager>();
     session_manager_ptr_ = const_cast<Common::MockSessionManager*>(reinterpret_cast<const Common::MockSessionManager*>(session_manager_.get()));
     filter_ = std::make_unique<SessionManagerFilter>(proto_config_, session_manager_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
-  ::envoy::config::filter::http::session_manager::v1alpha::SessionManager proto_config_;
+  std::shared_ptr<::envoy::config::filter::http::session_manager::v1alpha::SessionManager> proto_config_;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   std::unique_ptr<SessionManagerFilter> filter_;
   Common::SessionManagerPtr session_manager_;
@@ -58,18 +59,18 @@ TEST_F(SessionManagerFilterTest, onDestroy) {
 // When no cookies are included in a request return Continue with no
 // header modification.
 TEST_F(SessionManagerFilterTest, onDecodeHeadersNoCookies) {
-  MessageUtil::loadFromYaml(exampleConfig, proto_config_);
+  MessageUtil::loadFromYaml(exampleConfig, *proto_config_.get());
   auto headers = Http::TestHeaderMapImpl{};
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
-  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_rule().name()));
+  auto authz = headers.get(Http::LowerCaseString(proto_config_->forward_rule().name()));
   EXPECT_EQ(authz, nullptr);
 };
 
 // When we call a safe method (GET, HEAD, OPTIONS) insert token into expected
 // header whether our binding is passed or not.
 TEST_F(SessionManagerFilterTest, onDecodeHeadersSafeMethod) {
-  MessageUtil::loadFromYaml(exampleConfig, proto_config_);
+  MessageUtil::loadFromYaml(exampleConfig, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
     {
       {":method", "GET"},
@@ -88,7 +89,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersSafeMethod) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
 
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_->forward_rule().name()));
     EXPECT_NE(authz, nullptr);
     EXPECT_STREQ(authz->value().c_str(), "Bearer 1234567890");
   }
@@ -97,14 +98,14 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersSafeMethod) {
 // When our configuration includes a preamble make sure it is encoded into
 // the output header
 TEST_F(SessionManagerFilterTest, onDecodeHeadersPreamble) {
-  MessageUtil::loadFromYaml(exampleConfig, proto_config_);
+  MessageUtil::loadFromYaml(exampleConfig, *proto_config_.get());
   Http::TestHeaderMapImpl headers = {
       {":method", "GET"},
       {"cookie", "__Secure-acme-session-cookie=1234567890"}
   };
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
-  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_rule().name()));
+  auto authz = headers.get(Http::LowerCaseString(proto_config_->forward_rule().name()));
   EXPECT_NE(authz, nullptr);
   EXPECT_STREQ(authz->value().c_str(), "Bearer 1234567890");
 };
@@ -112,14 +113,14 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersPreamble) {
 // When our configuration *does not* include a preamble make sure our
 // output header is as expected.
 TEST_F(SessionManagerFilterTest, onDecodeHeadersNoPreamble) {
-  MessageUtil::loadFromYaml(exampleConfigNoPreamble, proto_config_);
+  MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
   Http::TestHeaderMapImpl headers = {
     {":method", "GET"},
     {"cookie", "__Secure-acme-session-cookie=1234567890"}
   };
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
-  auto authz = headers.get(Http::LowerCaseString(proto_config_.forward_rule().name()));
+  auto authz = headers.get(Http::LowerCaseString(proto_config_->forward_rule().name()));
   EXPECT_NE(authz, nullptr);
   EXPECT_STREQ(authz->value().c_str(), "1234567890");
 };
@@ -127,7 +128,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersNoPreamble) {
 // When we receive a non-safe request without binding check that
 // we do not map our token to the configured output header.
 TEST_F(SessionManagerFilterTest, onDecodeHeadersMissingBinding) {
-  MessageUtil::loadFromYaml(exampleConfigNoPreamble, proto_config_);
+  MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
       {
           {":method", "POST"},
@@ -149,7 +150,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersMissingBinding) {
   for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_->forward_rule().name()));
     EXPECT_EQ(authz, nullptr);
   }
 };
@@ -157,7 +158,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersMissingBinding) {
 // When we receive a non-safe request with an invalid binding check that
 // we do not map our token to the configured output header.
 TEST_F(SessionManagerFilterTest, onDecodeHeadersInvalidBinding) {
-  MessageUtil::loadFromYaml(exampleConfigNoPreamble, proto_config_);
+  MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
       {
           {":method", "POST"},
@@ -183,7 +184,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersInvalidBinding) {
   for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "invalid")).WillOnce(testing::Return(false));
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_->forward_rule().name()));
     EXPECT_EQ(authz, nullptr);
   }
 };
@@ -191,7 +192,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersInvalidBinding) {
 // When we receive a non-safe request with *a valid* binding ensure that
 // we map our token to the configured output header.
 TEST_F(SessionManagerFilterTest, onDecodeHeadersValidBinding) {
-  MessageUtil::loadFromYaml(exampleConfigNoPreamble, proto_config_);
+  MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
       {
           {":method", "POST"},
@@ -217,7 +218,7 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersValidBinding) {
   for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "valid")).WillOnce(testing::Return(true));
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
-    auto authz = headers[i].get(Http::LowerCaseString(proto_config_.forward_rule().name()));
+    auto authz = headers[i].get(Http::LowerCaseString(proto_config_->forward_rule().name()));
     EXPECT_NE(authz, nullptr);
     EXPECT_STREQ(authz->value().c_str(), "1234567890");
   }

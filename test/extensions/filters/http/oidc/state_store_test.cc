@@ -29,10 +29,7 @@ TEST_F(StateStoreTest, create) {
 
 TEST_F(StateStoreTest, get) {
   // Case 1) get state that exists
-  StateStore::StateContext::Nonce nonce;
-  int rc = RAND_bytes(nonce, sizeof(nonce));
-  ASSERT(rc == 1);
-  StateStore::StateContext put("idp", "hostname", nonce);
+  StateStore::StateContext put("idp", "hostname");
   auto handle = store_->create(put, std::chrono::seconds(10));
   auto expected = store_->get(handle);
   EXPECT_FALSE(expected == store_->end());

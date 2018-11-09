@@ -11,10 +11,10 @@
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Common {
+namespace Oidc {
 
-class jwt_fetcher;
-typedef std::unique_ptr<jwt_fetcher> JwtFetcherPtr;
+class JwtFetcher;
+typedef std::unique_ptr<JwtFetcher> JwtFetcherPtr;
 /**
  * JwtFetcher interface can be used to retrieve remote Jwt
  * (https://tools.ietf.org/html/rfc7519) data structures returning a concrete,
@@ -39,7 +39,7 @@ class JwtFetcher {
      * Retrieval error callback.
      * * @param reason the failure reason.
      */
-    virtual void onJwtFailure(Failure reason) PURE;
+    virtual void onJwtFailure(Common::Failure reason) PURE;
   };
 
   virtual ~JwtFetcher(){};

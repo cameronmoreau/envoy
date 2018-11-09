@@ -17,6 +17,7 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
   Upstream::ClusterManager& cm_;
   const ::envoy::api::v2::core::HttpUri* uri_ = nullptr;
   std::string method_;
+  std::string accept_;
   std::string content_type_;
   Fetcher::Receiver* receiver_;
   Http::AsyncClient::Request* request_ = nullptr;
@@ -36,6 +37,7 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
 
   void fetch(const ::envoy::api::v2::core::HttpUri& uri,
              const std::string& method,
+             const std::string& accept,
              const std::string& content_type,
              const std::string& body,
              Fetcher::Receiver& receiver) override {
@@ -47,10 +49,16 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
     receiver_ = &receiver;
     uri_ = &uri;
     method_ = method;
+    accept_ = accept;
     content_type_ = content_type;
     Http::MessagePtr message = Http::Utility::prepareHeaders(uri);
     message->headers().insertMethod().value().setReference(method_);
-    message->headers().insertAccept().value().setReference(content_type_);
+    if (accept_.length() > 0) {
+      message->headers().insertAccept().value().setReference(accept_);
+    }
+    if (content_type_.length() > 0) {
+      message->headers().insertContentType().value().setReference(content_type_);
+    }
     if (body.length() > 0) {
       message->body().reset(new Buffer::OwnedImpl(body));
     }
@@ -75,12 +83,13 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
       return;
     }
     // Does the return contain the expected content-type header?
-    auto content_type_header = response->headers().ContentType();
-    if (!content_type_header || content_type_header->value().getStringView() != absl::string_view(content_type_)) {
-      ENVOY_LOG(debug, "{}: fetch [uri = {}]: content-type header incorrect");
-      std::cerr << "content-type error" << std::endl;
-      receiver_->onFetchFailure(Failure::InvalidData);
-      return;
+    if (accept_.length()) {
+      auto content_type_header = response->headers().ContentType();
+      if (!content_type_header || content_type_header->value().getStringView() != absl::string_view(accept_)) {
+        ENVOY_LOG(debug, "{}: fetch [uri = {}]: unexpected value of content-type header");
+        receiver_->onFetchFailure(Failure::InvalidData);
+        return;
+      }
     }
     // Does the request contain a body?
     if (!response->body()) {

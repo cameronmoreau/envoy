@@ -27,6 +27,15 @@ envoy_cc_test_library(
     ],
 )
 
+envoy_cc_test_library(
+    name = "session_manager_mock_lib",
+    hdrs = [
+        "session_manager_mock.h",
+    ],
+    deps = [
+    ],
+)
+
 envoy_extension_cc_test(
     name = "jwks_fetcher_test",
     srcs = [

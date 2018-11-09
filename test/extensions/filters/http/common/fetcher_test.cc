@@ -36,13 +36,17 @@ class FetcherTest : public ::testing::Test {
 class MockUpstream {
  public:
   MockUpstream(Upstream::MockClusterManager& mock_cm, const std::string& status,
+               const std::string& accept,
                const std::string& content_type,
                const std::string& response_body)
-      : request_(&mock_cm.async_client_), status_(status), content_type_(content_type), response_body_(response_body) {
+      : request_(&mock_cm.async_client_), status_(status), accept_(accept), content_type_(content_type), response_body_(response_body) {
     ON_CALL(mock_cm.async_client_, send_(testing::_, testing::_, testing::_))
-        .WillByDefault(testing::Invoke([this](Http::MessagePtr&, Http::AsyncClient::Callbacks& cb,
+        .WillByDefault(testing::Invoke([this](Http::MessagePtr& msg, Http::AsyncClient::Callbacks& cb,
                                               const absl::optional<std::chrono::milliseconds>&)
                                            -> Http::AsyncClient::Request* {
+          if (accept_.length() > 0) {
+            EXPECT_STREQ(accept_.c_str(), msg->headers().Accept()->value().c_str());
+          }
           Http::MessagePtr response_message(new Http::ResponseMessageImpl(
               Http::HeaderMapPtr{new Http::TestHeaderMapImpl{{":status", status_}, {"content-type", content_type_}}}));
           if (response_body_.length()) {
@@ -64,6 +68,7 @@ class MockUpstream {
  private:
   Http::MockAsyncClientRequest request_;
   std::string status_;
+  std::string accept_;
   std::string content_type_;
   std::string response_body_;
 };
@@ -81,7 +86,7 @@ class MockReceiver : public Fetcher::Receiver {
 
 TEST_F(FetcherTest, TestGetSuccess) {
   // Setup
-  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", "application/json", "{}");
+  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "{}");
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
@@ -89,12 +94,12 @@ TEST_F(FetcherTest, TestGetSuccess) {
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
 
   // Act
-  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, "", receiver);
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "", receiver);
 }
 
 TEST_F(FetcherTest, TestPostSuccess) {
   // Setup
-  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", "application/json", "{}");
+  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "{}");
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
@@ -102,12 +107,12 @@ TEST_F(FetcherTest, TestPostSuccess) {
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
 
   // Act
-  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Post, Http::Headers::get().ContentTypeValues.Json, "", receiver);
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Post, Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "", receiver);
 }
 
 TEST_F(FetcherTest, TestMissingBody) {
   // Setup
-  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", Http::Headers::get().ContentTypeValues.Json, "");
+  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "");
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
@@ -115,12 +120,12 @@ TEST_F(FetcherTest, TestMissingBody) {
   EXPECT_CALL(receiver, onFetchFailure(Failure::InvalidData)).Times(1);
 
   // Act
-  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, "", receiver);
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "", receiver);
 }
 
 TEST_F(FetcherTest, TestGet400) {
   // Setup
-  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "400", "application/json", "invalid");
+  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "400", Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "invalid");
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
@@ -128,12 +133,12 @@ TEST_F(FetcherTest, TestGet400) {
   EXPECT_CALL(receiver, onFetchFailure(Failure::Network)).Times(1);
 
   // Act
-  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, "", receiver);
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "", receiver);
 }
 
 TEST_F(FetcherTest, TestUnexpectedContentType) {
   // Setup
-  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", "xml", "");
+  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", Http::Headers::get().ContentTypeValues.Json, "xml", "");
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
@@ -141,7 +146,20 @@ TEST_F(FetcherTest, TestUnexpectedContentType) {
   EXPECT_CALL(receiver, onFetchFailure(Failure::InvalidData)).Times(1);
 
   // Act
-  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, "", receiver);
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "", receiver);
+}
+
+TEST_F(FetcherTest, TestAnyContentType) {
+  // Setup
+  MockUpstream mock_response(mock_factory_ctx_.cluster_manager_, "200", "", "xml", "<xml>yuk</xml>");
+  MockReceiver receiver;
+  std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
+  EXPECT_TRUE(fetcher != nullptr);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(1);
+  EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
+
+  // Act
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, "", Http::Headers::get().ContentTypeValues.Json, "", receiver);
 }
 
 TEST_F(FetcherTest, TestPost200) {
@@ -166,7 +184,7 @@ TEST_F(FetcherTest, TestPost200) {
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
 
   // Act
-  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Post, Http::Headers::get().ContentTypeValues.Json, "expected", receiver);
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Post, Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "expected", receiver);
 }
 
 TEST_F(FetcherTest, TestCancel) {
@@ -181,7 +199,7 @@ TEST_F(FetcherTest, TestCancel) {
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
   
   // Act
-  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, "", receiver);
+  fetcher->fetch(uri_, Http::Headers::get().MethodValues.Get, Http::Headers::get().ContentTypeValues.Json, Http::Headers::get().ContentTypeValues.Json, "", receiver);
   // Proper cancel
   fetcher->cancel();
   // Re-entrant cancel

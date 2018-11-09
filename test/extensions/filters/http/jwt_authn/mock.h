@@ -60,7 +60,7 @@ public:
                                      const absl::optional<std::chrono::milliseconds>&)
                                   -> Http::AsyncClient::Request* {
           Http::MessagePtr response_message(new Http::ResponseMessageImpl(
-              Http::HeaderMapPtr{new Http::TestHeaderMapImpl{{":status", "200"}}}));
+              Http::HeaderMapPtr{new Http::TestHeaderMapImpl{{":status", "200"}, {"content-type", "application/json; charset=UTF-8"}}}));
           response_message->body().reset(new Buffer::OwnedImpl(response_body_));
           cb.onSuccess(std::move(response_message));
           called_count_++;

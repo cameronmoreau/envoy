@@ -18,7 +18,7 @@ const std::vector<std::string> httpSafeMethods = {
 }
 
 SessionManagerFilter::SessionManagerFilter(
-    std::shared_ptr<const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager> config,
+    std::shared_ptr<::envoy::config::filter::http::session_manager::v1alpha::SessionManager> config,
     Common::SessionManagerPtr session_manager)
     : session_manager_(session_manager), config_(config) {
   ENVOY_LOG(trace, "{}", __func__);

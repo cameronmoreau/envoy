@@ -24,7 +24,7 @@ envoy_extension_cc_test(
     ],
     extension_name = "envoy.filters.http.oidc",
     deps = [
-        "//source/extensions/filters/http/common:jwt_fetcher_lib",
+        "//source/extensions/filters/http/oidc:jwt_fetcher_lib",
         "//test/mocks/http:http_mocks",
         "//test/mocks/server:server_mocks",
         "//test/test_common:utility_lib",

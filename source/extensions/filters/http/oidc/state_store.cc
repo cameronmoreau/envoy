@@ -1,6 +1,5 @@
 #include <map>
 
-#include "common/common/assert.h"
 #include "common/common/lock_guard.h"
 #include "common/common/thread.h"
 

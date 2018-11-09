@@ -14,7 +14,7 @@ Http::FilterFactoryCb FilterFactory::createFilterFactoryFromProtoTyped(
     const std::string&, Server::Configuration::FactoryContext&) {
   auto sessionManagerPtr =
       Common::SessionManager::SessionManager::Create(proto_config.token_binding().secret());
-  auto configPtr = std::make_shared<const ::envoy::config::filter::http::session_manager::v1alpha::SessionManager>(proto_config);
+  auto configPtr = std::make_shared<::envoy::config::filter::http::session_manager::v1alpha::SessionManager>(proto_config);
   return [configPtr, sessionManagerPtr](Http::FilterChainFactoryCallbacks& callbacks) -> void {
     callbacks.addStreamDecoderFilter(std::make_shared<SessionManagerFilter>(configPtr, sessionManagerPtr));
   };
