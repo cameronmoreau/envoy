@@ -48,7 +48,7 @@ namespace {
         "properties" : {
           "access_token": {"type": "string"},
           "id_token": {"type": "string"},
-          "token_type": {"type": "string", "enum": ["Bearer"]},
+          "token_type": {"type": "string", "enum": ["Bearer", "bearer"]},
           "expires_in": {"type": "integer"}
         },
         "required" : ["id_token"],
@@ -368,7 +368,7 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
   if (status != ::google::jwt_verify::Status::Ok) {
     // TODO (nickrmc): remove all the duplicate fail code.
     auth_request_.request = nullptr;
-    ENVOY_LOG(warn, "Failed to retrieve JWKS.");
+    ENVOY_LOG(warn, "Failed to verify JWKS.");
     Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::InternalServerError, Http::CodeUtility::toString(Http::Code::InternalServerError), false);
     state_machine_ = state::replied;
     return;
