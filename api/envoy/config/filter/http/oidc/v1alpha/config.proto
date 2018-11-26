@@ -25,6 +25,7 @@ import "envoy/config/filter/http/session_manager/v1alpha/config.proto";
 //       cluster: tenant1-cluster
 //     client_id: client-10
 //     client_secret: ABCDEF0123456789
+//     scopes: [profile, email]
 //
 // [#not-implemented-hide:]
 message OidcClient {
@@ -38,6 +39,8 @@ message OidcClient {
   string client_id = 4 [(validate.rules).string.min_bytes = 1];
   // The shared client secret. This field is security sensitive.
   string client_secret = 5 [(validate.rules).string.min_bytes = 1];
+  // OpenID Connect scopes to use when requesting a token. If not specified, the openid scope will always be requested.
+  repeated string scopes = 6;
 }
 
 // A Match maps an incoming request to an IdP based on a specified HTTP header and it's value.

@@ -1,6 +1,7 @@
 #include <chrono>
 #include <ctime>
 #include <exception>
+#include <set>
 #include <string>
 
 
@@ -95,6 +96,23 @@ namespace {
                     Http::Code response_code) {
     AdditionalHeaders_t additionalHeaders;
     sendRedirect(callbacks, new_path, response_code, additionalHeaders);
+  }
+
+  std::string scopesToString(const google::protobuf::RepeatedPtrField<std::string>& scopes) {
+    // Always include the openid scope. Everything else is an extra.
+    std::set<std::string> scope_set {"openid"};
+    scope_set.insert(scopes.cbegin(), scopes.cend());
+
+    std::stringstream output;
+    bool first = true;
+    for (auto scope = scope_set.cbegin(); scope != scope_set.cend(); ++scope) {
+      if (!first) {
+        output << "%20";
+      }
+      output << *scope;
+      first = false;
+    }
+    return output.str();
   }
 } // unnamed namespace
 
@@ -244,8 +262,8 @@ void OidcFilter::redirectToAuthenticationServer(const std::string &idp_name, con
   // We need to construct our local authentication callback endpoint.
   std::ostringstream endpoint_stream;
   endpoint_stream << "https://" << host << config_->authentication_callback();
-  auto location = fmt::format("{}?response_type=code&scope=openid%20email&client_id={}&state={}&nonce={}&redirect_uri={}",
-      idp.authorization_endpoint().uri(), idp.client_id(), state, ctx.nonce_.ToString(), urlSafeEncode(endpoint_stream.str()));
+  auto location = fmt::format("{}?response_type=code&scope={}&client_id={}&state={}&nonce={}&redirect_uri={}",
+      idp.authorization_endpoint().uri(), scopesToString(idp.scopes()), idp.client_id(), state, ctx.nonce_.ToString(), urlSafeEncode(endpoint_stream.str()));
   sendRedirect(*decoder_callbacks_, location, Http::Code::Found);
 }
 
