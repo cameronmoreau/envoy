@@ -1,5 +1,4 @@
 #pragma once
-#include <functional>
 
 #include "envoy/server/filter_config.h"
 

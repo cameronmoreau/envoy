@@ -134,6 +134,7 @@ public:
   void createUpstreams() override {
     HttpProtocolIntegrationTest::createUpstreams();
     // for Jwks upstream.
+    std::cerr << "Creating fake upstream" << std::endl;
     fake_upstreams_.emplace_back(
         new FakeUpstream(0, GetParam().upstream_protocol, version_, timeSystem()));
   }
@@ -195,7 +196,6 @@ TEST_P(RemoteJwksIntegrationTest, WithGoodToken) {
   initializeFilter();
 
   codec_client_ = makeHttpConnection(lookupPort("http"));
-
   auto response = codec_client_->makeHeaderOnlyRequest(Http::TestHeaderMapImpl{
       {":method", "GET"},
       {":path", "/"},
@@ -205,7 +205,6 @@ TEST_P(RemoteJwksIntegrationTest, WithGoodToken) {
   });
 
   waitForJwksResponse("200", PublicKey);
-
   waitForNextUpstreamRequest();
 
   const auto* payload_entry =
@@ -214,7 +213,6 @@ TEST_P(RemoteJwksIntegrationTest, WithGoodToken) {
   EXPECT_EQ(payload_entry->value().getStringView(), ExpectedPayloadValue);
   // Verify the token is removed.
   EXPECT_FALSE(upstream_request_->headers().Authorization());
-
   upstream_request_->encodeHeaders(Http::TestHeaderMapImpl{{":status", "200"}}, true);
 
   response->waitForEndStream();

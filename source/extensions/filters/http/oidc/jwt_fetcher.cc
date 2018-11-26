@@ -48,7 +48,8 @@ class JwtFetcherImpl : public JwtFetcher,
   }
 
   // HTTP async receive methods
-  void onFetchSuccess(Buffer::InstancePtr&& response) override {
+  void onFetchSuccess(const std::string&, Buffer::InstancePtr&& response) override {
+    // TODO (nickrmc83): verify content-type
     ENVOY_LOG(trace, "{}", __func__);
     const auto len = response->length();
     const auto body = std::string(static_cast<char *>(response->linearize(len)), len);

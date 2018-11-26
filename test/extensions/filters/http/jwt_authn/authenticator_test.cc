@@ -6,6 +6,7 @@
 #include "extensions/filters/http/jwt_authn/filter_config.h"
 
 #include "test/extensions/filters/http/common/jwks_fetcher_mock.h"
+#include "test/extensions/filters/http/common/mock.h"
 #include "test/extensions/filters/http/jwt_authn/mock.h"
 #include "test/extensions/filters/http/jwt_authn/test_common.h"
 #include "test/mocks/server/mocks.h"
@@ -178,10 +179,7 @@ TEST_F(AuthenticatorTest, TestInvalidJWT) {
 
 // This test verifies if Authorization header has invalid prefix, JwtMissed status is returned
 TEST_F(AuthenticatorTest, TestInvalidPrefix) {
-  EXPECT_CALL(*fetcher_, fetch(_, _)).Times(0);
-  EXPECT_CALL(mock_cb_, onComplete(_)).WillOnce(Invoke([](const Status& status) {
-    ASSERT_EQ(status, Status::JwtMissed);
-  }));
+  EXPECT_CALL(*raw_fetcher_, fetch(_, _)).Times(0);
 
   auto headers = Http::TestHeaderMapImpl{{"Authorization", "Bearer-invalid"}};
   expectVerifyStatus(Status::JwtMissed, headers);
@@ -207,8 +205,7 @@ TEST_F(AuthenticatorTest, TestExpiredJWT) {
 
 // This test verifies when a JWT is not yet valid, JwtNotYetValid status is returned.
 TEST_F(AuthenticatorTest, TestNotYetValidJWT) {
-  EXPECT_CALL(*fetcher_, fetch(_, _)).Times(0);
-  EXPECT_CALL(mock_cb_, onComplete(Status::JwtNotYetValid)).Times(1);
+  EXPECT_CALL(*raw_fetcher_, fetch(_, _)).Times(0);
 
   auto headers =
       Http::TestHeaderMapImpl{{"Authorization", "Bearer " + std::string(NotYetValidToken)}};
@@ -237,18 +234,6 @@ TEST_F(AuthenticatorTest, TestNonMatchAudJWT) {
   expectVerifyStatus(Status::JwtAudienceNotAllowed, headers);
 }
 
-// This test verifies when a JWT is with invalid audience, JwtAudienceNotAllowed is returned.
-TEST_F(AuthenticatorTest, TestNonMatchAudJWT) {
-  EXPECT_CALL(*fetcher_, fetch(_, _)).Times(0);
-  EXPECT_CALL(mock_cb_, onComplete(_)).WillOnce(Invoke([](const Status& status) {
-    ASSERT_EQ(status, Status::JwtAudienceNotAllowed);
-  }));
-
-  auto headers =
-      Http::TestHeaderMapImpl{{"Authorization", "Bearer " + std::string(InvalidAudToken)}};
-  auth_->verify(headers, &mock_cb_);
-}
-
 // This test verifies when Jwt issuer is not configured, JwtUnknownIssuer is returned.
 TEST_F(AuthenticatorTest, TestIssuerNotFound) {
   // Create a config with an other issuer.
@@ -266,7 +251,7 @@ TEST_F(AuthenticatorTest, TestPubkeyFetchFail) {
   EXPECT_CALL(*raw_fetcher_, fetch(_, _))
       .WillOnce(
           Invoke([](const ::envoy::api::v2::core::HttpUri&, JwksFetcher::JwksReceiver& receiver) {
-            receiver.onJwksError(JwksFetcher::JwksReceiver::Failure::InvalidJwks);
+            receiver.onJwksFailure(Common::Failure::InvalidData);
           }));
 
   auto headers = Http::TestHeaderMapImpl{{"Authorization", "Bearer " + std::string(GoodToken)}};

@@ -77,10 +77,10 @@ class MockReceiver : public Fetcher::Receiver {
  public:
   // GoogleMock does not support r-value references. To get around this we use
   // an intermediate.
-  void onFetchSuccess(Buffer::InstancePtr&& body) override {
-    onFetchSuccessImpl(body.get());
+  void onFetchSuccess(const std::string& content, Buffer::InstancePtr&& body) override {
+    onFetchSuccessImpl(content, body.get());
   }
-  MOCK_METHOD1(onFetchSuccessImpl, void(Buffer::Instance* body));
+  MOCK_METHOD2(onFetchSuccessImpl, void(const std::string& content, Buffer::Instance* body));
   MOCK_METHOD1(onFetchFailure, void(Failure reason));
 };
 
@@ -90,7 +90,7 @@ TEST_F(FetcherTest, TestGetSuccess) {
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(1);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(Http::Headers::get().ContentTypeValues.Json, testing::_)).Times(1);
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
 
   // Act
@@ -103,7 +103,7 @@ TEST_F(FetcherTest, TestPostSuccess) {
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(1);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(Http::Headers::get().ContentTypeValues.Json, testing::_)).Times(1);
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
 
   // Act
@@ -116,7 +116,7 @@ TEST_F(FetcherTest, TestMissingBody) {
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(0);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_, testing::_)).Times(0);
   EXPECT_CALL(receiver, onFetchFailure(Failure::InvalidData)).Times(1);
 
   // Act
@@ -129,7 +129,7 @@ TEST_F(FetcherTest, TestGet400) {
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(0);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_, testing::_)).Times(0);
   EXPECT_CALL(receiver, onFetchFailure(Failure::Network)).Times(1);
 
   // Act
@@ -142,7 +142,7 @@ TEST_F(FetcherTest, TestUnexpectedContentType) {
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(0);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_, testing::_)).Times(0);
   EXPECT_CALL(receiver, onFetchFailure(Failure::InvalidData)).Times(1);
 
   // Act
@@ -155,7 +155,7 @@ TEST_F(FetcherTest, TestAnyContentType) {
   MockReceiver receiver;
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(1);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_, testing::_)).Times(1);
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
 
   // Act
@@ -180,7 +180,7 @@ TEST_F(FetcherTest, TestPost200) {
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
   EXPECT_CALL(request, cancel()).Times(0);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(1);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(Http::Headers::get().ContentTypeValues.Json, testing::_)).Times(1);
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
 
   // Act
@@ -195,7 +195,7 @@ TEST_F(FetcherTest, TestCancel) {
   std::unique_ptr<Fetcher> fetcher(Fetcher::create(mock_factory_ctx_.cluster_manager_));
   EXPECT_TRUE(fetcher != nullptr);
   EXPECT_CALL(request, cancel()).Times(1);
-  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_)).Times(0);
+  EXPECT_CALL(receiver, onFetchSuccessImpl(testing::_, testing::_)).Times(0);
   EXPECT_CALL(receiver, onFetchFailure(testing::_)).Times(0);
   
   // Act

@@ -78,31 +78,25 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
     if (status_code != enumToInt(Http::Code::OK)) {
       ENVOY_LOG(debug, "{}: fetch [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
-      std::cerr << "status error" << std::endl;
       receiver_->onFetchFailure(Failure::Network);
       return;
-    }
-    // Does the return contain the expected content-type header?
-    if (accept_.length()) {
-      auto content_type_header = response->headers().ContentType();
-      if (!content_type_header || content_type_header->value().getStringView() != absl::string_view(accept_)) {
-        ENVOY_LOG(debug, "{}: fetch [uri = {}]: unexpected value of content-type header");
-        receiver_->onFetchFailure(Failure::InvalidData);
-        return;
-      }
     }
     // Does the request contain a body?
     if (!response->body()) {
       ENVOY_LOG(debug, "{}: fetch [uri = {}]: body is empty", __func__, uri_->uri());
-      std::cerr << "response body error" << std::endl;
       receiver_->onFetchFailure(Failure::InvalidData);
       return;
     }
-    receiver_->onFetchSuccess(std::move(response->body()));
+
+    auto content_type_header = response->headers().ContentType();
+    if (content_type_header) {
+      receiver_->onFetchSuccess(content_type_header->value().c_str(), std::move(response->body()));
+    } else {
+      receiver_->onFetchSuccess("", std::move(response->body()));
+    }
   }
 
   void onFailure(Http::AsyncClient::FailureReason reason) override {
-    std::cerr << "Failure from " << uri_->uri() << " verb: " << method_ << std::endl;
     ENVOY_LOG(debug, "{}: fetch [uri = {}]: network error {}", __func__, uri_->uri(),
               enumToInt(reason));
     request_ = nullptr;

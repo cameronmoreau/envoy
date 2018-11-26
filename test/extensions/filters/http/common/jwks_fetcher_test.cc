@@ -7,7 +7,9 @@
 #include "extensions/filters/http/common/jwks_fetcher.h"
 
 #include "test/extensions/filters/http/common/mock.h"
+#include "test/extensions/filters/http/common/jwks_fetcher_mock.h"
 #include "test/mocks/http/mocks.h"
+#include "test/mocks/server/mocks.h"
 #include "test/test_common/utility.h"
 
 using ::envoy::api::v2::core::HttpUri;
@@ -55,6 +57,35 @@ public:
   HttpUri uri_;
   testing::NiceMock<Server::Configuration::MockFactoryContext> mock_factory_ctx_;
 };
+
+TEST_F(JwksFetcherTest, TestValidContentType) {
+  // Setup
+  std::map<std::string, bool> test_cases = {
+      // A set of validatable allowable content-type encodings.
+      {"application/json", true},
+      {"application/json;charset=utf-8", true},
+      {"application/json ;charset=utf-8", true},
+      {"application/json; charset=utf-8", true},
+      {"application/json;charset=\"utf-8\"", true},
+      {"application/json; charset=\"utf-8\"", true},
+      {"application/json ;charset=\"utf-8\"", true},
+      {"APPLICATION/JSON", true},
+      {"APPLICATION/JSON;CHARSET=UTF-8", true},
+      {"APPLICATION/JSON;charset=UTF-8", true},
+      {"APPLICATION/json ; charset=utf-8", true},
+      // Bad content-type
+      {"application/xml", false},
+      {"text", false},
+      {"html", false},
+
+  };
+  std::unique_ptr<JwksFetcher> fetcher(JwksFetcher::create(mock_factory_ctx_.cluster_manager_));
+
+  // Act
+  for (auto test : test_cases) {
+    EXPECT_EQ(fetcher->validContentType(test.first), test.second);
+  }
+}
 
 // Test findByIssuer.
 TEST_F(JwksFetcherTest, TestGetSuccess) {

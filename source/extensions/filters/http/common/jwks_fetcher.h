@@ -46,6 +46,14 @@ public:
    */
   virtual void cancel() PURE;
 
+
+  /*
+   * Validate whether the given content-type header value is supported.
+   * @param content the media-type to check.
+   * @return the validation result.
+   */
+  virtual bool validContentType(const std::string& content) const PURE;
+
   /*
    * Retrieve a JWKS resource from a remote HTTP host.
    * At most one outstanding request may be in-flight,

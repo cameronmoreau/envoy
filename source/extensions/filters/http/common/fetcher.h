@@ -35,8 +35,9 @@ class Fetcher {
     /*
      * Successful retrieval callback.
      * @param body the body of the HTTP response.
+     * @param content_type the Content-type of the reply or empty string if not set,
      */
-    virtual void onFetchSuccess(Buffer::InstancePtr&& body) PURE;
+    virtual void onFetchSuccess(const std::string& content_type, Buffer::InstancePtr&& body) PURE;
     /*
      * Retrieval error callback.
      * @param err the reason for failure.
