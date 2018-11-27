@@ -1,6 +1,8 @@
 #include "common/http/utility.h"
 
 #include <cstdint>
+#include <iomanip>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -24,29 +26,6 @@
 
 namespace Envoy {
 namespace Http {
-namespace {
-  // See https://tools.ietf.org/html/rfc3986#section-2.2
-  const std::unordered_map<char,std::string> url_reserved_character_map = {
-      {'!', "%21"},
-      {'#', "%23"},
-      {'$', "%24"},
-      {'&', "%26"},
-      {'\'', "%27"},
-      {'(', "%28"},
-      {')', "%29"},
-      {'*', "%2A"},
-      {'+', "%2B"},
-      {',', "%2C"},
-      {'/', "%2F"},
-      {':', "%3A"},
-      {';', "%3B"},
-      {'=', "%3D"},
-      {'?', "%3F"},
-      {'@', "%40"},
-      {']', "%5B"},
-      {'[', "%5D"},
-  };
-} // namespace
 
 void Utility::appendXff(HeaderMap& headers, const Network::Address::Instance& remote_address) {
   if (remote_address.type() != Network::Address::Type::Ip) {
@@ -472,11 +451,18 @@ void Utility::transformUpgradeResponseFromH2toH1(HeaderMap& headers, absl::strin
 std::string Utility::urlSafeEncode(const std::string& url) {
   std::stringstream builder;
   for (auto character : url) {
-    const auto &iter = url_reserved_character_map.find(character);
-    if (iter !=  url_reserved_character_map.end()) {
-      builder << iter->second;
+    // unreserved characters
+    if ((character >= 'A' && character <= 'Z') ||
+        (character >= 'a' && character <= 'z') ||
+        (character >= '0' && character <= '9') ||
+        (character == '-') ||
+        (character == '_') ||
+        (character == '.') ||
+        (character == '~')) {
+        builder << character;
     } else {
-      builder << character;
+      // percent encode
+      builder << '%' << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << std::noshowbase <<  std::noshowpos << int(character);
     }
   }
   return builder.str();

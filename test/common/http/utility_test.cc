@@ -551,8 +551,8 @@ TEST(HttpUtility, QueryParamsToString) {
 }
 
 TEST(HttpUtility, UrlSafeEncode) {
-  static const char *input = R"RAW(abcdefghijklmnopqrstuvwxyz0123456789-._~!#$&'()*+,/:;=?@[])RAW";
-  static const std::string expected = "abcdefghijklmnopqrstuvwxyz0123456789-._~%21%23%24%26%27%28%29%2A%2B%2C%2F%3A%3B%3D%3F%40%5B%5D";
+  static const char *input = R"RAW(abcdefghijklmnopqrstuvwxyz0123456789-._~!#$&'()*+,/:;=?@[] abcdef)RAW";
+  static const std::string expected = "abcdefghijklmnopqrstuvwxyz0123456789-._~%21%23%24%26%27%28%29%2A%2B%2C%2F%3A%3B%3D%3F%40%5B%5D%20abcdef";
 
   std::string encoded = Utility::urlSafeEncode(input);
 
