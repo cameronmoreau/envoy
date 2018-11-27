@@ -116,26 +116,6 @@ namespace {
   }
 } // unnamed namespace
 
-std::string OidcFilter::urlSafeEncode(const std::string &param) {
-  std::ostringstream result;
-  for(auto character = param.begin(); character != param.end(); character++) {
-    if(*character ==  ' ') {
-      result << "%20";
-    } else if((*character >= 'A' && *character <= 'Z') ||
-        (*character >= 'a' && *character <= 'z') ||
-        (*character >= '0' && *character <= '9') ||
-        (*character == '*') ||
-        (*character == '-') ||
-        (*character == '_') ||
-        (*character == '~')) {
-      result << *character;
-    } else {
-      result << '%' << hexTable[((*character & 0xF0) >> 4)] << hexTable[(*character & 0x0F)];
-    }
-  }
-  return result.str();
-}
-
 bool OidcFilter::isSupportedContentType(const LowerCaseString &got) {
   return std::find(validTokenResponseContentTypes.begin(), validTokenResponseContentTypes.end(), got) != validTokenResponseContentTypes.end();
 }
@@ -199,7 +179,7 @@ void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::stri
     state_machine_ = state::replied;
     return;
   }
-  auto redirect = urlSafeEncode(fmt::format("https://{}{}", ctx.hostname_, config_->authentication_callback()));
+  auto redirect = Http::Utility::urlSafeEncode(fmt::format("https://{}{}", ctx.hostname_, config_->authentication_callback()));
   Http::MessagePtr request = Http::Utility::prepareHeaders(iter->second.idp().token_endpoint());
   request->headers().insertMethod().value(Http::Headers::get().MethodValues.Post);
   request->headers().insertContentType().value(std::string("application/x-www-form-urlencoded"));
@@ -263,7 +243,7 @@ void OidcFilter::redirectToAuthenticationServer(const std::string &idp_name, con
   std::ostringstream endpoint_stream;
   endpoint_stream << "https://" << host << config_->authentication_callback();
   auto location = fmt::format("{}?response_type=code&scope={}&client_id={}&state={}&nonce={}&redirect_uri={}",
-      idp.authorization_endpoint().uri(), scopesToString(idp.scopes()), idp.client_id(), state, ctx.nonce_.ToString(), urlSafeEncode(endpoint_stream.str()));
+      idp.authorization_endpoint().uri(), scopesToString(idp.scopes()), idp.client_id(), state, ctx.nonce_.ToString(), Http::Utility::urlSafeEncode(endpoint_stream.str()));
   sendRedirect(*decoder_callbacks_, location, Http::Code::Found);
 }
 
