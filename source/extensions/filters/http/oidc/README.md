@@ -1,4 +1,18 @@
-Example Google OIDC config
+# Preface
+
+To run the below examples on a local development machine you must first create a private key and certificate
+used during TLS negotiation. All examples are configured to expect the key and certificate to be found under
+`/tmp`. To create a self-signed certificate using OpenSSL run the following command from your terminal:
+
+```bash
+openssl req -outform PEM -out /tmp/key.crt -new -keyout /tmp/key.pem -newkey rsa:2048 -batch -nodes -x509 -subj "/CN=tenant.cluster.com" -days 365
+```
+
+Configuration items that appear in angled brackets - <> - must be replaced.
+
+
+## Example Google OIDC config
+
 ```yaml
 admin:
   access_log_path: /tmp/envoy_admin_access.log

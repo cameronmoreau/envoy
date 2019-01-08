@@ -3,9 +3,10 @@ syntax = "proto3";
 
 package envoy.config.filter.http.oidc.v1alpha;
 
-import "validate/validate.proto";
+import "envoy/api/v2/core/base.proto";
 import "envoy/api/v2/core/http_uri.proto";
 import "envoy/config/filter/http/session_manager/v1alpha/config.proto";
+import "validate/validate.proto";
 
 // This message specifies the configuration of an OpenID Connect Client or relying-party (RP).
 // See https://openid.net/specs/openid-connect-core-1_0.html for more details.
@@ -33,14 +34,42 @@ message OidcClient {
   envoy.api.v2.core.HttpUri authorization_endpoint = 1;
   // The token endpoint where authorizaion and ID tokens can be redeemed.
   envoy.api.v2.core.HttpUri token_endpoint = 2;
-  // The JWKS endpoint where an OpenID Connect provider's signing keys can be obtained.
-  envoy.api.v2.core.HttpUri jwks_uri = 3;
+  oneof jwks_source_specifier {
+    option (validate.required) = true;
+    // The JWKS endpoint where an OpenID Connect provider's signing keys can be obtained.
+    //
+    // Example:
+    //
+    // .. code-block:: yaml
+    //
+    // jwks_uri: "https://acme.com/.well-known/jwks.json
+    //
+    envoy.api.v2.core.HttpUri jwks_uri = 3;
+    // JWKS is in local data source. It could be either in a local file or embedded in the
+    // inline_string.
+    //
+    // Example: local file
+    //
+    // .. code-block:: yaml
+    //
+    //    local_jwks:
+    //      filename: /etc/envoy/jwks/jwks1.json
+    //
+    // Example: inline_string
+    //
+    // .. code-block:: yaml
+    //
+    //    local_jwks:
+    //      inline_string: ACADADADADA
+    //
+    envoy.api.v2.core.DataSource local_jwks = 4;
+  }
   // The unique client identity.
-  string client_id = 4 [(validate.rules).string.min_bytes = 1];
+  string client_id = 5 [(validate.rules).string.min_bytes = 1];
   // The shared client secret. This field is security sensitive.
-  string client_secret = 5 [(validate.rules).string.min_bytes = 1];
+  string client_secret = 6 [(validate.rules).string.min_bytes = 1];
   // OpenID Connect scopes to use when requesting a token. If not specified, the openid scope will always be requested.
-  repeated string scopes = 6;
+  repeated string scopes = 7;
 }
 
 // A Match maps an incoming request to an IdP based on a specified HTTP header and it's value.

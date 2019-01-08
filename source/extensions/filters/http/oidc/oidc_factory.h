@@ -16,7 +16,8 @@ namespace Oidc {
  * Config registration for OpenID Connect filter.
  */
 class FilterFactory : public Common::FactoryBase<
-    ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> {
+    ::envoy::config::filter::http::oidc::v1alpha::OidcConfig>,
+    public Logger::Loggable<Logger::Id::filter> {
  public:
   FilterFactory() : FactoryBase(HttpFilterNames::get().OpenIDConnect) {
     state_store_ = StateStore::create();

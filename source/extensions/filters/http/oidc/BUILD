@@ -49,6 +49,7 @@ envoy_cc_library(
         "//include/envoy/upstream:cluster_manager_interface",
         "//source/common/common:enum_to_int",
         "//source/common/common:minimal_logger_lib",
+        "//source/common/config:datasource_lib",
         "//source/common/http:codes_lib",
         "//source/extensions/filters/http/common:jwks_fetcher_lib",
         "//source/extensions/filters/http/common:session_manager_lib",
@@ -64,6 +65,7 @@ envoy_cc_library(
     hdrs = ["oidc_factory.h"],
     deps = [
         "//include/envoy/registry",
+        "//source/common/config:datasource_lib",
         "//source/extensions/filters/http:well_known_names",
         "//source/extensions/filters/http/common:factory_base_lib",
         "//source/extensions/filters/http/oidc:oidc_filter_lib",

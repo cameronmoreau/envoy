@@ -8,6 +8,7 @@
 #include "extensions/filters/http/oidc/oidc_filter.h"
 
 #include "common/common/enum_to_int.h"
+#include "common/config/datasource.h"
 #include "common/http/codes.h"
 #include "common/http/utility.h"
 #include "common/http/message_impl.h"
@@ -188,6 +189,7 @@ void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::stri
   request->body().reset(new Buffer::OwnedImpl(body));
   auth_request_.nonce = ctx.nonce_;
   auth_request_.jwks_uri = iter->second.idp().jwks_uri();
+  auth_request_.local_jwks = iter->second.idp().local_jwks();
   try {
     auth_request_.request = cluster_manager_.httpAsyncClientForCluster(iter->second.idp().token_endpoint().cluster())
         .send(std::move(request), *this, tokenRedemptionTimeout);
@@ -264,6 +266,13 @@ void OidcFilter::verifyIdToken(const std::string &token) {
     state_machine_ = state::replied;
     return;
   }
+  /* Check if a local jwks has been configured. If so load. */
+  const auto inline_jwks = Config::DataSource::read(auth_request_.local_jwks, true);
+  if (!inline_jwks.empty()) {
+    onJwksSuccess(::google::jwt_verify::Jwks::createFrom(inline_jwks, ::google::jwt_verify::Jwks::JWKS));
+    return;
+  }
+  /* end of local jwks. */
   fetcher_ = fetcherCb_(cluster_manager_);
   fetcher_->fetch(auth_request_.jwks_uri, *this);
 }

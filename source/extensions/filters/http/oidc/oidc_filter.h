@@ -115,6 +115,7 @@ class OidcFilter
   struct RequestContext {
     Http::AsyncClient::Request* request;
     ::envoy::api::v2::core::HttpUri jwks_uri;
+      ::envoy::api::v2::core::DataSource local_jwks;
     StateStore::Nonce nonce;
   };
 
