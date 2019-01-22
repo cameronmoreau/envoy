@@ -68,7 +68,8 @@ message OidcClient {
   string client_id = 5 [(validate.rules).string.min_bytes = 1];
   // The shared client secret. This field is security sensitive.
   string client_secret = 6 [(validate.rules).string.min_bytes = 1];
-  // OpenID Connect scopes to use when requesting a token. If not specified, the openid scope will always be requested.
+  // OpenID Connect scopes to use when requesting a token. If not specified, the openid scope will
+  // always be requested.
   repeated string scopes = 7;
 }
 
@@ -109,11 +110,13 @@ message Match {
 }
 
 // This message specifies the configuration of an OpenID Connect filter that allows:
-//   1) Envoy to act as a client in the Authorization Code Flow (https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth) so to
+//   1) Envoy to act as a client in the Authorization Code Flow
+//   (https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth) so to
 //     a) Ascertain an identity provider for authenticating the user based on an HTTP header.
 //     b) Acquire transparently or otherwise an identity token representing an end-user.
 //     c) Derive from the acquired identity token a set of session tokens.
-//     d) The generation of a session protection cookie, called a binding, to mitigate cross-site request forgery and Person-in-the-browser
+//     d) The generation of a session protection cookie, called a binding, to mitigate cross-site
+//     request forgery and Person-in-the-browser
 //        (PiTB, MiTB) attacks.
 //
 // Example:
@@ -167,7 +170,8 @@ message OidcConfig {
   map<string, Match> matches = 1;
   // The path that receives an authentication reply from an OIDC provider.
   // Values for this should be chosen to be unique and so not to clash with services being fronted.
-  // The value of this field should be an absolute path value and not include a host or port specifier.
+  // The value of this field should be an absolute path value and not include a host or port
+  // specifier.
   string authentication_callback = 2;
   // The landing page to redirect to after successful authentication.
   string landing_page = 3;

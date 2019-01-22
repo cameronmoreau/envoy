@@ -1,5 +1,6 @@
-#include "extensions/filters/http/session_manager/session_manager_factory.h"
 #include "envoy/config/filter/http/session_manager/v1alpha/config.pb.validate.h"
+
+#include "extensions/filters/http/session_manager/session_manager_factory.h"
 
 #include "test/mocks/server/mocks.h"
 
@@ -35,17 +36,15 @@ forward_rule:
 } // namespace
 
 class SessionManagerFactoryTest : public ::testing::Test {
- public:
-  void SetUp() {
-    factory_ = std::make_unique<FilterFactory>();
-  }
+public:
+  void SetUp() { factory_ = std::make_unique<FilterFactory>(); }
 
   ::envoy::config::filter::http::session_manager::v1alpha::SessionManager proto_config_;
   NiceMock<Server::Configuration::MockFactoryContext> context_;
   std::unique_ptr<FilterFactory> factory_;
-  //NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
-  //Common::SessionManagerPtr session_manager_;
-  //Common::MockSessionManager* session_manager_ptr_;
+  // NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  // Common::SessionManagerPtr session_manager_;
+  // Common::MockSessionManager* session_manager_ptr_;
 };
 
 TEST_F(SessionManagerFactoryTest, createFilter) {

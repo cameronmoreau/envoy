@@ -452,17 +452,14 @@ std::string Utility::urlSafeEncode(const std::string& url) {
   std::stringstream builder;
   for (auto character : url) {
     // unreserved characters
-    if ((character >= 'A' && character <= 'Z') ||
-        (character >= 'a' && character <= 'z') ||
-        (character >= '0' && character <= '9') ||
-        (character == '-') ||
-        (character == '_') ||
-        (character == '.') ||
-        (character == '~')) {
-        builder << character;
+    if ((character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z') ||
+        (character >= '0' && character <= '9') || (character == '-') || (character == '_') ||
+        (character == '.') || (character == '~')) {
+      builder << character;
     } else {
       // percent encode
-      builder << '%' << std::hex << std::uppercase << std::setw(2) << std::setfill('0')  << std::noshowbase <<  std::noshowpos << int(character);
+      builder << '%' << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+              << std::noshowbase << std::noshowpos << int(character);
     }
   }
   return builder.str();

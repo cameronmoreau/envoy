@@ -23,7 +23,6 @@ using ::google::jwt_verify::Status;
 using ::testing::_;
 using ::testing::Invoke;
 using ::testing::NiceMock;
-using ::testing::_;
 
 namespace Envoy {
 namespace Extensions {

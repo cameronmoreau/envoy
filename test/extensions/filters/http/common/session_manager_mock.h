@@ -9,9 +9,9 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Common {
 class MockSessionManager : public SessionManager {
- public:
-  MOCK_CONST_METHOD1(CreateToken, SessionToken (const Context&));
-  MOCK_CONST_METHOD2(VerifyToken, bool (const Context&,const SessionToken&));
+public:
+  MOCK_CONST_METHOD1(CreateToken, SessionToken(const Context&));
+  MOCK_CONST_METHOD2(VerifyToken, bool(const Context&, const SessionToken&));
 };
 } // namespace Common
 } // namespace HttpFilters

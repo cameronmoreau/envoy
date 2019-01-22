@@ -33,9 +33,9 @@ public:
                     const absl::optional<std::string>& provider, bool allow_failed,
                     JwksCache& jwks_cache, Upstream::ClusterManager& cluster_manager,
                     CreateJwksFetcherCb create_jwks_fetcher_cb, TimeSource& time_source)
-      : jwks_cache_(jwks_cache), cm_(cluster_manager),
-        createJwksFetcherCb_(create_jwks_fetcher_cb), check_audience_(check_audience),
-        provider_(provider), is_allow_failed_(allow_failed), time_source_(time_source) {}
+      : jwks_cache_(jwks_cache), cm_(cluster_manager), createJwksFetcherCb_(create_jwks_fetcher_cb),
+        check_audience_(check_audience), provider_(provider), is_allow_failed_(allow_failed),
+        time_source_(time_source) {}
 
   // Following functions are for JwksFetcher::JwksReceiver interface
   void onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) override;

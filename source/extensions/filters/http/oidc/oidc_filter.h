@@ -2,14 +2,15 @@
 
 #include <string>
 
-#include "common/common/logger.h"
+#include "envoy/config/filter/http/oidc/v1alpha/config.pb.h"
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
+
+#include "common/common/logger.h"
 
 #include "extensions/filters/http/common/jwks_fetcher.h"
 #include "extensions/filters/http/common/session_manager.h"
 #include "extensions/filters/http/oidc/state_store.h"
-#include "envoy/config/filter/http/oidc/v1alpha/config.pb.h"
 
 #include "jwt_verify_lib/jwt.h"
 #include "jwt_verify_lib/verify.h"
@@ -23,22 +24,19 @@ namespace Oidc {
  */
 typedef std::function<Common::JwksFetcherPtr(Upstream::ClusterManager&)> CreateJwksFetcherCb;
 
-class OidcFilter
- : public Http::StreamFilter, // TODO: This is just a decoder stream filter
-   public Common::JwksFetcher::JwksReceiver,
-   public Http::AsyncClient::Callbacks,
-   public Logger::Loggable<Logger::Id::filter> {
- public:
+class OidcFilter : public Http::StreamFilter, // TODO: This is just a decoder stream filter
+                   public Common::JwksFetcher::JwksReceiver,
+                   public Http::AsyncClient::Callbacks,
+                   public Logger::Loggable<Logger::Id::filter> {
+public:
   /* OidcFilter constructor.
    * @param manager the cluster manager to address the configured OIDC provider.
    * @param the name of the configured OIDC provider.
    */
-  OidcFilter(
-      Upstream::ClusterManager &cluster_manager,
-      Common::SessionManagerPtr session_manager,
-      StateStorePtr state_store,
-      std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
-      CreateJwksFetcherCb fetcherCb);
+  OidcFilter(Upstream::ClusterManager& cluster_manager, Common::SessionManagerPtr session_manager,
+             StateStorePtr state_store,
+             std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
+             CreateJwksFetcherCb fetcherCb, TimeSource& time_source);
   ~OidcFilter();
 
   // Http::StreamFilterBase
@@ -87,35 +85,37 @@ class OidcFilter
    */
   static std::string urlSafeEncode(const std::string& param);
 
-  /* isSupportedContentType verifies whether the given media-type is a supported in a token redemption
-   * response.
+  /* isSupportedContentType verifies whether the given media-type is a supported in a token
+   * redemption response.
    * @param got the received media-type.
    * @return true if the media-type is supported.
    */
   static bool isSupportedContentType(const Http::LowerCaseString& got);
 
-  /* makeSetCookieValueHttpOnly encodes the given cookie including the name, value, max-age as well as including
-   * the HttpOnly, Secure and Strict tags.
+  /* makeSetCookieValueHttpOnly encodes the given cookie including the name, value, max-age as well
+   * as including the HttpOnly, Secure and Strict tags.
    * @param name the name of the cookie.
    * @param value the value of the cookie.
    * @param max_age the expiry of the cookie.
    * @return the encoded cookie.
    */
-  static std::string makeSetCookieValueHttpOnly(const std::string& name, const std::string& value, int64_t max_age);
-  /* makeSetCookieValueHttpOnly encodes the given cookie including the name, value, max-age as well as including
-   * the Strict and Secure tags.
+  static std::string makeSetCookieValueHttpOnly(const std::string& name, const std::string& value,
+                                                int64_t max_age);
+  /* makeSetCookieValueHttpOnly encodes the given cookie including the name, value, max-age as well
+   * as including the Strict and Secure tags.
    * @param name the name of the cookie.
    * @param value the value of the cookie.
    * @param max_age the expiry of the cookie.
    * @return the encoded cookie.
    */
-  static std::string makeSetCookieValue(const std::string &name, const std::string &value, int64_t max_age);
+  static std::string makeSetCookieValue(const std::string& name, const std::string& value,
+                                        int64_t max_age);
 
- private:
+private:
   struct RequestContext {
     Http::AsyncClient::Request* request;
     ::envoy::api::v2::core::HttpUri jwks_uri;
-      ::envoy::api::v2::core::DataSource local_jwks;
+    ::envoy::api::v2::core::DataSource local_jwks;
     StateStore::Nonce nonce;
   };
 
@@ -127,9 +127,9 @@ class OidcFilter
     setCookie,
   };
 
-  Http::HeaderMap *headers_ = nullptr;
+  Http::HeaderMap* headers_ = nullptr;
   state state_machine_ = state::init;
-  Upstream::ClusterManager &cluster_manager_;
+  Upstream::ClusterManager& cluster_manager_;
   std::string cluster_;
   Common::SessionManagerPtr session_manager_;
   StateStorePtr state_store_;
@@ -139,34 +139,35 @@ class OidcFilter
   RequestContext auth_request_ = {};
   ::google::jwt_verify::Jwt jwt_;
   int64_t expiry_;
-  Http::StreamDecoderFilterCallbacks *decoder_callbacks_ =  {};
-  Http::StreamEncoderFilterCallbacks *encoder_callbacks_ = {};
+  Http::StreamDecoderFilterCallbacks* decoder_callbacks_ = {};
+  Http::StreamEncoderFilterCallbacks* encoder_callbacks_ = {};
+  TimeSource& time_source_;
 
   /* redeemCode redeems the given code for authorization and ID tokens at the token endpoint/
    * @param ctx the state context.
    * @param code the one-time code to redeem.
    */
-  void redeemCode(const StateStore::StateContext& ctx, const std::string &code);
+  void redeemCode(const StateStore::StateContext& ctx, const std::string& code);
   /* handleAuthenticationResponse handles a redirection from an OIDC provider after a user has
    * authenitcated.
    * @param method the HTTP verb the request was made with.
    * @param url the url including query parameters addressed.
    */
-  void handleAuthenticationResponse(const std::string &method, const std::string &url);
+  void handleAuthenticationResponse(const std::string& method, const std::string& url);
   /* redirectToAuthenticationServer redirects a user agent to an OIDC provider for authentication.
    * @param idp_name the idp identifier.
    * @param idp the idp to redirect to.
    * @param host the host being addressed that'll be used to forward a token redemption code.
    */
-  void redirectToAuthenticationServer(const std::string &idp_name,
-                                      const ::envoy::config::filter::http::oidc::v1alpha::OidcClient& idp,
-                                      const std::string &host);
+  void redirectToAuthenticationServer(
+      const std::string& idp_name,
+      const ::envoy::config::filter::http::oidc::v1alpha::OidcClient& idp, const std::string& host);
   /* verifyToken verifies a JWT token is authentic.
    * @param token the token to verify.
    */
-  void verifyIdToken(const std::string &token);
+  void verifyIdToken(const std::string& token);
 };
 } // namespace Oidc
-} // namespace HttpFilter
+} // namespace HttpFilters
 } // namespace Extensions
-} // Envoy
+} // namespace Envoy

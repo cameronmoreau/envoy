@@ -35,16 +35,19 @@ forward_rule:
 } // namespace
 
 class SessionManagerFilterTest : public ::testing::Test {
- public:
+public:
   void SetUp() {
-    proto_config_ = std::make_shared<::envoy::config::filter::http::session_manager::v1alpha::SessionManager>();
+    proto_config_ =
+        std::make_shared<::envoy::config::filter::http::session_manager::v1alpha::SessionManager>();
     session_manager_ = std::make_shared<Common::MockSessionManager>();
-    session_manager_ptr_ = const_cast<Common::MockSessionManager*>(reinterpret_cast<const Common::MockSessionManager*>(session_manager_.get()));
+    session_manager_ptr_ = const_cast<Common::MockSessionManager*>(
+        reinterpret_cast<const Common::MockSessionManager*>(session_manager_.get()));
     filter_ = std::make_unique<SessionManagerFilter>(proto_config_, session_manager_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
-  std::shared_ptr<::envoy::config::filter::http::session_manager::v1alpha::SessionManager> proto_config_;
+  std::shared_ptr<::envoy::config::filter::http::session_manager::v1alpha::SessionManager>
+      proto_config_;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   std::unique_ptr<SessionManagerFilter> filter_;
   Common::SessionManagerPtr session_manager_;
@@ -72,20 +75,10 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersNoCookies) {
 TEST_F(SessionManagerFilterTest, onDecodeHeadersSafeMethod) {
   MessageUtil::loadFromYaml(exampleConfig, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
-    {
-      {":method", "GET"},
-      {"cookie", "__Secure-acme-session-cookie=1234567890"}
-    },
-    {
-        {":method", "HEAD"},
-        {"cookie", "__Secure-acme-session-cookie=1234567890"}
-    },
-    {
-      {":method", "OPTIONS"},
-      {"cookie", "__Secure-acme-session-cookie=1234567890"}
-    }
-  };
-  for(size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
+      {{":method", "GET"}, {"cookie", "__Secure-acme-session-cookie=1234567890"}},
+      {{":method", "HEAD"}, {"cookie", "__Secure-acme-session-cookie=1234567890"}},
+      {{":method", "OPTIONS"}, {"cookie", "__Secure-acme-session-cookie=1234567890"}}};
+  for (size_t i = 0; i < sizeof(headers) / sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
 
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
@@ -99,10 +92,8 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersSafeMethod) {
 // the output header
 TEST_F(SessionManagerFilterTest, onDecodeHeadersPreamble) {
   MessageUtil::loadFromYaml(exampleConfig, *proto_config_.get());
-  Http::TestHeaderMapImpl headers = {
-      {":method", "GET"},
-      {"cookie", "__Secure-acme-session-cookie=1234567890"}
-  };
+  Http::TestHeaderMapImpl headers = {{":method", "GET"},
+                                     {"cookie", "__Secure-acme-session-cookie=1234567890"}};
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
   auto authz = headers.get(Http::LowerCaseString(proto_config_->forward_rule().name()));
@@ -114,10 +105,8 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersPreamble) {
 // output header is as expected.
 TEST_F(SessionManagerFilterTest, onDecodeHeadersNoPreamble) {
   MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
-  Http::TestHeaderMapImpl headers = {
-    {":method", "GET"},
-    {"cookie", "__Secure-acme-session-cookie=1234567890"}
-  };
+  Http::TestHeaderMapImpl headers = {{":method", "GET"},
+                                     {"cookie", "__Secure-acme-session-cookie=1234567890"}};
   EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
   EXPECT_EQ(filter_->decodeHeaders(headers, false), Http::FilterHeadersStatus::Continue);
   auto authz = headers.get(Http::LowerCaseString(proto_config_->forward_rule().name()));
@@ -130,24 +119,12 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersNoPreamble) {
 TEST_F(SessionManagerFilterTest, onDecodeHeadersMissingBinding) {
   MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
-      {
-          {":method", "POST"},
-          {"cookie", "__Secure-acme-session-cookie=1234567890"}
-      },
-      {
-          {":method", "PUT"},
-          {"cookie", "__Secure-acme-session-cookie=1234567890"}
-      },
-      {
-          {":method", "DELETE"},
-          {"cookie", "__Secure-acme-session-cookie=1234567890"}
-      },
-      {
-          {":method", "PATCH"},
-          {"cookie", "__Secure-acme-session-cookie=1234567890"}
-      },
+      {{":method", "POST"}, {"cookie", "__Secure-acme-session-cookie=1234567890"}},
+      {{":method", "PUT"}, {"cookie", "__Secure-acme-session-cookie=1234567890"}},
+      {{":method", "DELETE"}, {"cookie", "__Secure-acme-session-cookie=1234567890"}},
+      {{":method", "PATCH"}, {"cookie", "__Secure-acme-session-cookie=1234567890"}},
   };
-  for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
+  for (size_t i = 0; i < sizeof(headers) / sizeof(*headers); i++) {
     EXPECT_CALL(*session_manager_ptr_, VerifyToken(testing::_, testing::_)).Times(0);
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
     auto authz = headers[i].get(Http::LowerCaseString(proto_config_->forward_rule().name()));
@@ -160,29 +137,22 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersMissingBinding) {
 TEST_F(SessionManagerFilterTest, onDecodeHeadersInvalidBinding) {
   MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
-      {
-          {":method", "POST"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "invalid" }
-      },
-      {
-          {":method", "PUT"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "invalid" }
-      },
-      {
-          {":method", "PATCH"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "invalid" }
-      },
-      {
-          {":method", "DELETE"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "invalid" }
-      },
+      {{":method", "POST"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "invalid"}},
+      {{":method", "PUT"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "invalid"}},
+      {{":method", "PATCH"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "invalid"}},
+      {{":method", "DELETE"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "invalid"}},
   };
-  for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
-    EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "invalid")).WillOnce(testing::Return(false));
+  for (size_t i = 0; i < sizeof(headers) / sizeof(*headers); i++) {
+    EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "invalid"))
+        .WillOnce(testing::Return(false));
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
     auto authz = headers[i].get(Http::LowerCaseString(proto_config_->forward_rule().name()));
     EXPECT_EQ(authz, nullptr);
@@ -194,29 +164,22 @@ TEST_F(SessionManagerFilterTest, onDecodeHeadersInvalidBinding) {
 TEST_F(SessionManagerFilterTest, onDecodeHeadersValidBinding) {
   MessageUtil::loadFromYaml(exampleConfigNoPreamble, *proto_config_.get());
   Http::TestHeaderMapImpl headers[] = {
-      {
-          {":method", "POST"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "valid" }
-      },
-      {
-          {":method", "PUT"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "valid" }
-      },
-      {
-          {":method", "PATCH"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "valid" }
-      },
-      {
-          {":method", "DELETE"},
-          { "cookie", "__Secure-acme-session-cookie=1234567890" },
-          { "x-xsrf-token", "valid" }
-      },
+      {{":method", "POST"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "valid"}},
+      {{":method", "PUT"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "valid"}},
+      {{":method", "PATCH"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "valid"}},
+      {{":method", "DELETE"},
+       {"cookie", "__Secure-acme-session-cookie=1234567890"},
+       {"x-xsrf-token", "valid"}},
   };
-  for (size_t i = 0; i < sizeof(headers)/sizeof(*headers); i++) {
-    EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "valid")).WillOnce(testing::Return(true));
+  for (size_t i = 0; i < sizeof(headers) / sizeof(*headers); i++) {
+    EXPECT_CALL(*session_manager_ptr_, VerifyToken("1234567890", "valid"))
+        .WillOnce(testing::Return(true));
     EXPECT_EQ(filter_->decodeHeaders(headers[i], false), Http::FilterHeadersStatus::Continue);
     auto authz = headers[i].get(Http::LowerCaseString(proto_config_->forward_rule().name()));
     EXPECT_NE(authz, nullptr);

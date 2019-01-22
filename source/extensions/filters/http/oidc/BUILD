@@ -16,6 +16,7 @@ envoy_cc_library(
         "ssl",
     ],
     deps = [
+        "//include/envoy/common:time_interface",
         "//source/common/common:assert_lib",
         "//source/common/common:base64_lib",
         "//source/common/common:thread_lib",

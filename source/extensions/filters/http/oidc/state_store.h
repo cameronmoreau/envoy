@@ -5,9 +5,11 @@
 #include <memory>
 #include <string>
 
+#include "envoy/common/pure.h"
+#include "envoy/common/time.h"
+
 #include "common/common/assert.h"
 #include "common/common/base64.h"
-#include "envoy/common/pure.h"
 
 #include "openssl/crypto.h"
 #include "openssl/rand.h"
@@ -24,13 +26,13 @@ public:
   typedef std::string state_handle_t;
   struct Nonce {
     typedef uint8_t NonceValue[32];
-    NonceValue Value {0};
+    NonceValue Value{0};
     Nonce() {
       static const NonceValue zero = {0};
       do {
         int rc = RAND_bytes(Value, sizeof(NonceValue));
         ASSERT(rc == 1);
-      } while(memcpy(Value, zero, sizeof(NonceValue)) == 0);
+      } while (memcpy(Value, zero, sizeof(NonceValue)) == 0);
     }
 
     explicit Nonce(const std::string& str) {
@@ -45,13 +47,11 @@ public:
       return *this;
     }
 
-    bool operator ==(const Nonce& rhs) const {
+    bool operator==(const Nonce& rhs) const {
       return CRYPTO_memcmp(Value, rhs.Value, sizeof(NonceValue)) == 0;
     }
 
-    bool operator !=(const Nonce& rhs) const {
-      return !(*this == rhs);
-    }
+    bool operator!=(const Nonce& rhs) const { return !(*this == rhs); }
 
     std::string ToString() const {
       return Base64Url::encode(reinterpret_cast<const char*>(Value), sizeof(NonceValue));
@@ -65,15 +65,11 @@ public:
 
     StateContext() {}
     StateContext(const std::string& idp, const std::string& hostname)
-        : idp_(idp), hostname_(hostname) {
+        : idp_(idp), hostname_(hostname) {}
 
-    }
+    bool operator!=(const StateContext& rhs) const { return !(*this == rhs); }
 
-    bool operator!=(const StateContext& rhs) const {
-      return !(*this == rhs);
-    }
-
-    bool operator ==(const StateContext& rhs) const {
+    bool operator==(const StateContext& rhs) const {
       return (idp_ == rhs.idp_ && hostname_ == rhs.hostname_ && nonce_ == rhs.nonce_);
     }
   };
@@ -90,7 +86,8 @@ public:
    * @param expiry the expiration of the state.
    * @return a handle to the state stored.
    */
-  virtual state_handle_t create(const StateContext& ctx, const std::chrono::seconds& expiry) PURE;
+  virtual state_handle_t create(const StateContext& ctx, const std::chrono::seconds& expiry,
+                                TimeSource& time_source) PURE;
   /**
    * get returns the state for the given handle and removing it from the state store.
    * If no state is associated with the given handle, the returned value will be equal to the result
@@ -98,10 +95,11 @@ public:
    * @param handle the handle to the stored state.
    * @return the state context associated with the handle.
    */
-  virtual StateContext get(const state_handle_t& handle) PURE;
+  virtual StateContext get(const state_handle_t& handle, TimeSource& time_source) PURE;
 
   /**
    * Create an instance of a StateStore.
+   * @param time_source the source of required time values.
    * @return An instance of a StateStore.
    */
   static StateStorePtr create();

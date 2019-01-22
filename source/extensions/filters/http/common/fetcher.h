@@ -1,8 +1,8 @@
 #pragma once
 
 #include "envoy/api/v2/core/http_uri.pb.h"
-#include "envoy/common/pure.h"
 #include "envoy/buffer/buffer.h"
+#include "envoy/common/pure.h"
 #include "envoy/upstream/cluster_manager.h"
 
 namespace Envoy {
@@ -21,16 +21,15 @@ enum class Failure {
   InvalidData,
 };
 
-
 /**
  * Fetcher interface can be used to retrieve remote Http resources.
  * An instance of this interface is designed to retrieve a single resource
  * and should not be re-used to fetch further resources.
  */
 class Fetcher {
- public:
+public:
   class Receiver {
-   public:
+  public:
     virtual ~Receiver(){};
     /*
      * Successful retrieval callback.
@@ -53,18 +52,17 @@ class Fetcher {
   /*
    * Retrieve a resource from a remote HTTP host.
    * @param uri the uri to retrieve the jwks from.
-   * @param method the HTTP method to use. Typically GET or POST. This reference must live longer than the request.
-   * @param accept header value. This reference must live longer than the request. If empty no header is set.
+   * @param method the HTTP method to use. Typically GET or POST. This reference must live longer
+   * than the request.
+   * @param accept header value. This reference must live longer than the request. If empty no
+   * header is set.
    * @param content_type header value. This reference must live longer than the request.
    * @param body the body of the request. GET requests must pass an empty string.
    * @param receiver the receiver of the fetched resource or error.
    */
-  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri,
-                     const std::string& method,
-                     const std::string& accept,
-                     const std::string& content_type,
-                     const std::string& body,
-                     Receiver& receiver) PURE;
+  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri, const std::string& method,
+                     const std::string& accept, const std::string& content_type,
+                     const std::string& body, Receiver& receiver) PURE;
   /*
    * Factory method for creating a Fetcher.
    * @param cm the cluster manager to use during resource retrieval

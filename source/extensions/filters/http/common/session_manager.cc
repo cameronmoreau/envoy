@@ -1,9 +1,9 @@
+#include "extensions/filters/http/common/session_manager.h"
+
 #include <cstring>
 #include <stdexcept>
 
 #include "common/common/base64.h"
-
-#include "extensions/filters/http/common/session_manager.h"
 
 #include "openssl/crypto.h"
 #include "openssl/evp.h"

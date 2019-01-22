@@ -12,12 +12,13 @@ namespace Common {
 class MockJwksFetcher : public JwksFetcher {
 public:
   MOCK_METHOD0(cancel, void());
-  MOCK_CONST_METHOD1(validContentType, bool (const std::string& content));
-  MOCK_METHOD2(fetch, void(const ::envoy::api::v2::core::HttpUri& uri, JwksFetcher::JwksReceiver& receiver));
+  MOCK_CONST_METHOD1(validContentType, bool(const std::string& content));
+  MOCK_METHOD2(fetch, void(const ::envoy::api::v2::core::HttpUri& uri,
+                           JwksFetcher::JwksReceiver& receiver));
 };
 
 class MockJwksReceiver : public JwksFetcher::JwksReceiver {
- public:
+public:
   /* GoogleMock does handle r-value references hence the below construction.
    * Expectations and assertions should be made on onJwksSuccessImpl in place
    * of onJwksSuccess.

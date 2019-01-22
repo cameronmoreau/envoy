@@ -1,9 +1,12 @@
 licenses(["notice"])  # Apache 2
 
+load("//bazel:envoy_build_system.bzl", "envoy_package")
 load(
     "//test/extensions:extensions_build_system.bzl",
     "envoy_extension_cc_test",
 )
+
+envoy_package()
 
 envoy_extension_cc_test(
     name = "state_store_test",
@@ -13,6 +16,7 @@ envoy_extension_cc_test(
     extension_name = "envoy.filters.http.oidc",
     deps = [
         "//source/extensions/filters/http/oidc:state_store_lib",
+        "//test/test_common:simulated_time_system_lib",
         "//test/test_common:utility_lib",
     ],
 )

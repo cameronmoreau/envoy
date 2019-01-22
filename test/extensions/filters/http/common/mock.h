@@ -12,14 +12,11 @@ namespace HttpFilters {
 namespace Common {
 
 class MockFetcher : public Fetcher {
- public:
+public:
   MOCK_METHOD0(cancel, void());
-  MOCK_METHOD6(fetch,
-    void(const ::envoy::api::v2::core::HttpUri& uri,
-      const std::string& method,
-      const std::string& accept,
-      const std::string& content_type,
-      const std::string& body, Fetcher::Receiver& receiver));
+  MOCK_METHOD6(fetch, void(const ::envoy::api::v2::core::HttpUri& uri, const std::string& method,
+                           const std::string& accept, const std::string& content_type,
+                           const std::string& body, Fetcher::Receiver& receiver));
 };
 
 // A mock HTTP upstream.

@@ -24,10 +24,9 @@ typedef std::unique_ptr<JwtFetcher> JwtFetcherPtr;
 
 typedef std::unique_ptr<google::jwt_verify::Jwt> JwtPtr;
 class JwtFetcher {
- public:
-
+public:
   class JwtReceiver {
-   public:
+  public:
     virtual ~JwtReceiver(){};
     /*
      * Successful retrieval callback.
@@ -58,12 +57,9 @@ class JwtFetcher {
    * @param redirect_uri the uri to redirect response to.
    * @param receiver the receiver of the fetched Jwt or error.
    */
-  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri,
-                     const std::string& client_id,
-                     const std::string& client_secret,
-                     const std::string& code,
-                     const std::string& redirect_uri,
-                     JwtReceiver& receiver) PURE;
+  virtual void fetch(const ::envoy::api::v2::core::HttpUri& uri, const std::string& client_id,
+                     const std::string& client_secret, const std::string& code,
+                     const std::string& redirect_uri, JwtReceiver& receiver) PURE;
 
   /*
    * Factory method for creating a jwt_fetcher.
@@ -72,7 +68,7 @@ class JwtFetcher {
    */
   static JwtFetcherPtr create(Upstream::ClusterManager& cm);
 };
-} // namespace Common
+} // namespace Oidc
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy

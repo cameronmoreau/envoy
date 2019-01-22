@@ -15,15 +15,15 @@ namespace Oidc {
 /**
  * Config registration for OpenID Connect filter.
  */
-class FilterFactory : public Common::FactoryBase<
-    ::envoy::config::filter::http::oidc::v1alpha::OidcConfig>,
-    public Logger::Loggable<Logger::Id::filter> {
- public:
+class FilterFactory
+    : public Common::FactoryBase<::envoy::config::filter::http::oidc::v1alpha::OidcConfig>,
+      public Logger::Loggable<Logger::Id::filter> {
+public:
   FilterFactory() : FactoryBase(HttpFilterNames::get().OpenIDConnect) {
     state_store_ = StateStore::create();
   }
 
- private:
+private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
       const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig& proto_config,
       const std::string& stats_prefix, Server::Configuration::FactoryContext& context) override;

@@ -46,7 +46,6 @@ public:
    */
   virtual void cancel() PURE;
 
-
   /*
    * Validate whether the given content-type header value is supported.
    * @param content the media-type to check.

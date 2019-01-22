@@ -1,7 +1,7 @@
+#include "extensions/filters/http/session_manager/session_manager_filter.h"
+
 #include <string>
 #include <vector>
-
-#include "extensions/filters/http/session_manager/session_manager_filter.h"
 
 #include "common/http/utility.h"
 

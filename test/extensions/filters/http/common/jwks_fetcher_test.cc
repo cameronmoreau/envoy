@@ -6,8 +6,8 @@
 
 #include "extensions/filters/http/common/jwks_fetcher.h"
 
-#include "test/extensions/filters/http/common/mock.h"
 #include "test/extensions/filters/http/common/jwks_fetcher_mock.h"
+#include "test/extensions/filters/http/common/mock.h"
 #include "test/mocks/http/mocks.h"
 #include "test/mocks/server/mocks.h"
 #include "test/test_common/utility.h"

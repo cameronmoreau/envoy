@@ -19,7 +19,8 @@ class SessionManagerFilter : public Http::StreamDecoderFilter,
                              public Logger::Loggable<Logger::Id::filter> {
 public:
   SessionManagerFilter(
-      std::shared_ptr<::envoy::config::filter::http::session_manager::v1alpha::SessionManager> config,
+      std::shared_ptr<::envoy::config::filter::http::session_manager::v1alpha::SessionManager>
+          config,
       Common::SessionManagerPtr session_manager);
 
   ~SessionManagerFilter();

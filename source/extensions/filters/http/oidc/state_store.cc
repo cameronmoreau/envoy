@@ -1,9 +1,11 @@
+#include "extensions/filters/http/oidc/state_store.h"
+
 #include <map>
+
+#include "envoy/common/time.h"
 
 #include "common/common/lock_guard.h"
 #include "common/common/thread.h"
-
-#include "extensions/filters/http/oidc/state_store.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -18,21 +20,23 @@ StateStore::StateContext unknown_context;
  */
 class LocalStateStoreImpl : public StateStore {
 public:
+  LocalStateStoreImpl() {}
+
   /**
    * Create a new state context.
    * @param ctx The context to store.
    * @param expiry The expiration time.
    * @return A handle to the stored state.
    */
-  StateStore::state_handle_t create(const StateContext& ctx,
-                                    const std::chrono::seconds& expiry) override {
+  StateStore::state_handle_t create(const StateContext& ctx, const std::chrono::seconds& expiry,
+                                    TimeSource& time_source) override {
     Thread::LockGuard lock(storeMutex_);
     state_handle_t handle;
     do {
       handle = randomHandle();
     } while (store_.find(handle) != store_.end());
-    auto calculated_expiry = std::chrono::steady_clock::now() + expiry;
-    ContextWrapper wrapper{.ctx_ = ctx, .expiry_ = calculated_expiry};
+    auto calculated_expiry = time_source.monotonicTime() + expiry;
+    ContextWrapper wrapper{ctx, calculated_expiry};
     store_[handle] = wrapper;
     return handle;
   }
@@ -45,13 +49,13 @@ public:
    * @param handle The handle to the state being stored.
    * @return The found state when the given handle is found else the zero state.
    */
-  StateContext get(const StateStore::state_handle_t& handle) override {
+  StateContext get(const StateStore::state_handle_t& handle, TimeSource& time_source) override {
     ContextWrapper ctx;
     if (!get_internal(handle, ctx)) {
       return end();
     }
-    auto diff = std::chrono::duration_cast<std::chrono::seconds>(ctx.expiry_ -
-                                                                 std::chrono::steady_clock::now());
+    auto diff =
+        std::chrono::duration_cast<std::chrono::seconds>(ctx.expiry_ - time_source.monotonicTime());
     if (diff <= std::chrono::seconds(0)) {
       return end();
     }
@@ -98,9 +102,9 @@ private:
   /**
    * Remove any expired state entries.
    */
-  void clean() {
+  void clean(TimeSource& time_source) {
     // TODO (nickrmc83): We need to periodically call this method.
-    auto now = std::chrono::steady_clock::now();
+    auto now = time_source.monotonicTime();
     Thread::LockGuard lock(storeMutex_);
     for (auto iter = store_.begin(); iter != store_.end();) {
       if (iter->second.expiry_ > now) {
@@ -114,6 +118,7 @@ private:
 
 /**
  * Create an instance of LocalStateStoreImpl
+ * @param time_source the source of required time values.
  * @return The instance.
  */
 StateStorePtr StateStore::create() { return std::make_shared<LocalStateStoreImpl>(); }

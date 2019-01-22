@@ -1,10 +1,11 @@
+#include "extensions/filters/http/common/fetcher.h"
+
 #include <iosfwd>
+
 #include "common/buffer/buffer_impl.h"
 #include "common/common/enum_to_int.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
-
-#include "extensions/filters/http/common/fetcher.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -12,8 +13,10 @@ namespace HttpFilters {
 namespace Common {
 namespace {
 
-class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>, public Http::AsyncClient::Callbacks {
- private:
+class FetcherImpl : public Fetcher,
+                    public Logger::Loggable<Logger::Id::filter>,
+                    public Http::AsyncClient::Callbacks {
+private:
   Upstream::ClusterManager& cm_;
   const ::envoy::api::v2::core::HttpUri* uri_ = nullptr;
   std::string method_;
@@ -22,10 +25,8 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
   Fetcher::Receiver* receiver_;
   Http::AsyncClient::Request* request_ = nullptr;
 
- public:
-  FetcherImpl(Upstream::ClusterManager& cm) : cm_(cm) {
-    ENVOY_LOG(trace, "{}", __func__);
-  }
+public:
+  FetcherImpl(Upstream::ClusterManager& cm) : cm_(cm) { ENVOY_LOG(trace, "{}", __func__); }
 
   void cancel() override {
     if (request_) {
@@ -35,15 +36,13 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
     }
   }
 
-  void fetch(const ::envoy::api::v2::core::HttpUri& uri,
-             const std::string& method,
-             const std::string& accept,
-             const std::string& content_type,
-             const std::string& body,
+  void fetch(const ::envoy::api::v2::core::HttpUri& uri, const std::string& method,
+             const std::string& accept, const std::string& content_type, const std::string& body,
              Fetcher::Receiver& receiver) override {
     ENVOY_LOG(trace, "{} {} {}", __func__, uri.uri(), content_type);
     // Only GET and POST methods should be used.
-    ASSERT(method == Http::Headers::get().MethodValues.Get || method == Http::Headers::get().MethodValues.Post);
+    ASSERT(method == Http::Headers::get().MethodValues.Get ||
+           method == Http::Headers::get().MethodValues.Post);
     // Never issue a GET request with a body.
     ASSERT(!(method == Http::Headers::get().MethodValues.Get && body.length() > 0));
     receiver_ = &receiver;
@@ -76,8 +75,8 @@ class FetcherImpl : public Fetcher, public Logger::Loggable<Logger::Id::filter>,
     // Did the call succeed?
     const uint64_t status_code = Http::Utility::getResponseStatus(response->headers());
     if (status_code != enumToInt(Http::Code::OK)) {
-      ENVOY_LOG(debug, "{}: fetch [uri = {}]: response status code {}", __func__,
-                uri_->uri(), status_code);
+      ENVOY_LOG(debug, "{}: fetch [uri = {}]: response status code {}", __func__, uri_->uri(),
+                status_code);
       receiver_->onFetchFailure(Failure::Network);
       return;
     }
