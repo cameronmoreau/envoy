@@ -36,7 +36,7 @@ public:
   explicit SessionManagerImpl(const std::string& key) {
     auto characters = Base64::decode(key);
     // At present we only support 32-byte/256-bit keys
-    if (characters.size() != sizeof(key)) {
+    if (characters.size() != sizeof(key_)) {  
       throw std::runtime_error(
           "expected session_protection_key to be 32 bytes after base64 decode");
     }
