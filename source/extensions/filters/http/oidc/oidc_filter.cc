@@ -32,12 +32,7 @@ const std::vector<LowerCaseString> validTokenResponseContentTypes = {
     LowerCaseString{"application/json; charset=utf-8"},
 };
 const std::chrono::milliseconds tokenRedemptionTimeout(120 * 1000); // 120 seconds
-// TODO: Define the below cookie and token name constants in a shared header for use
-// in the xsrf_filter and here.
-const std::string tokenCookieName = "istio_session";
-const std::string xsrfCookieName = "XSRF-TOKEN";
-const LowerCaseString xsrfHeaderName{"x-xsrf-token"};
-const std::chrono::seconds authentictionResponseTimeout(5 * 60); // 5 minutes
+const std::chrono::seconds authentictionResponseTimeout(5 * 60);    // 5 minutes
 const std::string tokenResponseSchema(
     R"EOF(
       {
@@ -65,6 +60,7 @@ int64_t expiry(int64_t timestamp, TimeSource& time_source) {
   std::chrono::seconds expiration = std::chrono::seconds(timestamp) - now;
   return expiration.count();
 }
+
 void sendResponse(Http::StreamDecoderFilterCallbacks& callbacks, Http::Code response_code,
                   const AdditionalHeaders_t& additionalHeaders) {
   Http::HeaderMapPtr response_headers{new Http::HeaderMapImpl{
@@ -355,9 +351,7 @@ Http::FilterHeadersStatus OidcFilter::encodeHeaders(Http::HeaderMap& headers, bo
     // Expire cookie 30 seconds before the jwt.
     int64_t cookieLifetime = std::max(seconds_until_expiration - 30, int64_t(0));
     ENVOY_LOG(trace, "OidcFilter {} lifetime", __func__, cookieLifetime);
-    // auto xsrfToken = session_manager_->CreateToken(jwt_.jwt_);
-    /// auto xsrf = makeSetCookieValue(xsrfCookieName, xsrfToken, cookieLifetime);
-    auto cookie = makeSetCookieValueHttpOnly(tokenCookieName, jwt_.jwt_, cookieLifetime);
+    auto cookie = makeSetCookieValueHttpOnly(config_->binding().token(), jwt_.jwt_, cookieLifetime);
     headers.addCopy(Http::Headers::get().SetCookie, cookie);
     // headers.addCopy(Http::Headers::get().SetCookie, xsrf);
   }
@@ -399,8 +393,8 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
     // Expire cookie 30 seconds before the jwt.
     int64_t cookieLifetime = std::max(seconds_until_expiration - 30, int64_t(0));
     auto xsrfToken = session_manager_->CreateToken(jwt_.jwt_);
-    auto xsrf = makeSetCookieValue(xsrfCookieName, xsrfToken, cookieLifetime);
-    auto cookie = makeSetCookieValueHttpOnly(tokenCookieName, jwt_.jwt_, cookieLifetime);
+    auto xsrf = makeSetCookieValue(config_->binding().binding(), xsrfToken, cookieLifetime);
+    auto cookie = makeSetCookieValueHttpOnly(config_->binding().token(), jwt_.jwt_, cookieLifetime);
     AdditionalHeaders_t headers = {
         std::pair<const LowerCaseString&, std::string>{Http::Headers::get().SetCookie, xsrf},
         std::pair<const LowerCaseString&, std::string>{Http::Headers::get().SetCookie, cookie},

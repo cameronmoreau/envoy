@@ -24,10 +24,10 @@ rm -rf /var/lib/apt/lists/*
 groupadd pcap
 chgrp pcap /usr/sbin/tcpdump
 chmod 750 /usr/sbin/tcpdump
-setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump
+setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump || true
 
 # virtualenv
 pip install virtualenv
 
-EXPECTED_CXX_VERSION="g++ (Ubuntu 5.4.0-6ubuntu1~16.04.10) 5.4.0 20160609" ./build_container_common.sh
+EXPECTED_CXX_VERSION="g++ (Ubuntu 5.4.0-6ubuntu1~16.04.11) 5.4.0 20160609" ./build_container_common.sh
 
