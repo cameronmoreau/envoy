@@ -32,7 +32,7 @@ public:
       do {
         int rc = RAND_bytes(Value, sizeof(NonceValue));
         ASSERT(rc == 1);
-      } while (memcpy(Value, zero, sizeof(NonceValue)) == 0);
+      } while (memcmp(Value, zero, sizeof(NonceValue)) == 0);
     }
 
     explicit Nonce(const std::string& str) {
