@@ -17,7 +17,7 @@
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Oidc {
+namespace Common {
 class StateStore;
 typedef std::shared_ptr<StateStore> StateStorePtr;
 
@@ -104,7 +104,7 @@ public:
    */
   static StateStorePtr create();
 };
-} // namespace Oidc
+} // namespace Common
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy

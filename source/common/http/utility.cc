@@ -27,6 +27,60 @@
 namespace Envoy {
 namespace Http {
 
+namespace {
+
+std::string
+parseCookieValueFromHeader(const HeaderMap& headers, const std::string& key,
+                           const LowerCaseString& headerKey = Http::Headers::get().Cookie) {
+  struct State {
+    std::string key_;
+    std::string ret_;
+    std::string header_;
+  };
+
+  State state;
+  state.key_ = key;
+  state.header_ = headerKey.get();
+
+  headers.iterateReverse(
+      [](const HeaderEntry& header, void* context) -> HeaderMap::Iterate {
+        State* state = static_cast<State*>(context);
+        // Find the cookie headers in the request (typically, there's only one).
+        if (header.key() == state->header_.c_str()) {
+          // Split the cookie header into individual cookies.
+          for (const auto s : StringUtil::splitToken(header.value().c_str(), ";")) {
+            // Find the key part of the cookie (i.e. the name of the cookie).
+            size_t first_non_space = s.find_first_not_of(" ");
+            size_t equals_index = s.find('=');
+            if (equals_index == std::string::npos) {
+              // The cookie is malformed if it does not have an `=`. Continue
+              // checking other cookies in this header.
+              continue;
+            }
+            const absl::string_view k = s.substr(first_non_space, equals_index - first_non_space);
+            // If the key matches, parse the value from the rest of the cookie string.
+            if (k == state->key_) {
+              absl::string_view v = s.substr(equals_index + 1, s.size() - 1);
+
+              // Cookie values may be wrapped in double quotes.
+              // https://tools.ietf.org/html/rfc6265#section-4.1.1
+              if (v.size() >= 2 && v.back() == '"' && v[0] == '"') {
+                v = v.substr(1, v.size() - 2);
+              }
+              state->ret_ = std::string{v};
+              return HeaderMap::Iterate::Break;
+            }
+          }
+        }
+        return HeaderMap::Iterate::Continue;
+      },
+      &state);
+
+  return state.ret_;
+}
+
+} // namespace
+
 void Utility::appendXff(HeaderMap& headers, const Network::Address::Instance& remote_address) {
   if (remote_address.type() != Network::Address::Type::Ip) {
     return;
@@ -86,50 +140,11 @@ const char* Utility::findQueryStringStart(const HeaderString& path) {
 }
 
 std::string Utility::parseCookieValue(const HeaderMap& headers, const std::string& key) {
+  return parseCookieValueFromHeader(headers, key, Http::Headers::get().Cookie);
+}
 
-  struct State {
-    std::string key_;
-    std::string ret_;
-  };
-
-  State state;
-  state.key_ = key;
-
-  headers.iterateReverse(
-      [](const HeaderEntry& header, void* context) -> HeaderMap::Iterate {
-        // Find the cookie headers in the request (typically, there's only one).
-        if (header.key() == Http::Headers::get().Cookie.get().c_str()) {
-          // Split the cookie header into individual cookies.
-          for (const auto s : StringUtil::splitToken(header.value().c_str(), ";")) {
-            // Find the key part of the cookie (i.e. the name of the cookie).
-            size_t first_non_space = s.find_first_not_of(" ");
-            size_t equals_index = s.find('=');
-            if (equals_index == std::string::npos) {
-              // The cookie is malformed if it does not have an `=`. Continue
-              // checking other cookies in this header.
-              continue;
-            }
-            const absl::string_view k = s.substr(first_non_space, equals_index - first_non_space);
-            State* state = static_cast<State*>(context);
-            // If the key matches, parse the value from the rest of the cookie string.
-            if (k == state->key_) {
-              absl::string_view v = s.substr(equals_index + 1, s.size() - 1);
-
-              // Cookie values may be wrapped in double quotes.
-              // https://tools.ietf.org/html/rfc6265#section-4.1.1
-              if (v.size() >= 2 && v.back() == '"' && v[0] == '"') {
-                v = v.substr(1, v.size() - 2);
-              }
-              state->ret_ = std::string{v};
-              return HeaderMap::Iterate::Break;
-            }
-          }
-        }
-        return HeaderMap::Iterate::Continue;
-      },
-      &state);
-
-  return state.ret_;
+std::string Utility::parseSetCookieValue(const HeaderMap& headers, const std::string& key) {
+  return parseCookieValueFromHeader(headers, key, Http::Headers::get().SetCookie);
 }
 
 std::string Utility::makeSetCookieValue(const std::string& key, const std::string& value,

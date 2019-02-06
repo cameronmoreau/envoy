@@ -7,6 +7,8 @@ load(
     "envoy_extension_cc_test",
 )
 
+envoy_package()
+
 envoy_cc_test_library(
     name = "mock_lib",
     hdrs = [
@@ -15,19 +17,6 @@ envoy_cc_test_library(
     deps = [
         "//source/extensions/filters/http/common:jwks_fetcher_lib",
         "//test/mocks/server:server_mocks",
-    ],
-)
-
-envoy_extension_cc_test(
-    name = "state_store_test",
-    srcs = [
-        "state_store_test.cc",
-    ],
-    extension_name = "envoy.filters.http.oidc",
-    deps = [
-        "//source/extensions/filters/http/oidc:state_store_lib",
-        "//test/test_common:simulated_time_system_lib",
-        "//test/test_common:utility_lib",
     ],
 )
 
@@ -43,5 +32,19 @@ envoy_extension_cc_test(
         "//test/extensions/filters/http/oidc:mock_lib",
         "//test/mocks/http:http_mocks",
         "//test/test_common:utility_lib",
+    ],
+)
+
+envoy_extension_cc_test(
+    name = "oidc_filter_integration_test",
+    srcs = [
+        "oidc_filter_integration_test.cc",
+    ],
+    extension_name = "envoy.filters.http.oidc",
+    deps = [
+        "//source/extensions/filters/http/oidc:config",
+        "//source/extensions/filters/http/session_manager:config",
+        "//test/extensions/filters/http/jwt_authn:test_common_lib",
+        "//test/integration:http_integration_lib",
     ],
 )

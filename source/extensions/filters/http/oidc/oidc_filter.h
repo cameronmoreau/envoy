@@ -10,7 +10,7 @@
 
 #include "extensions/filters/http/common/jwks_fetcher.h"
 #include "extensions/filters/http/common/session_manager.h"
-#include "extensions/filters/http/oidc/state_store.h"
+#include "extensions/filters/http/common/state_store.h"
 
 #include "jwt_verify_lib/jwt.h"
 #include "jwt_verify_lib/verify.h"
@@ -34,7 +34,7 @@ public:
    * @param the name of the configured OIDC provider.
    */
   OidcFilter(Upstream::ClusterManager& cluster_manager, Common::SessionManagerPtr session_manager,
-             StateStorePtr state_store,
+             Common::StateStorePtr state_store,
              std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
              CreateJwksFetcherCb fetcherCb, TimeSource& time_source);
   ~OidcFilter();
@@ -116,7 +116,7 @@ private:
     Http::AsyncClient::Request* request;
     ::envoy::api::v2::core::HttpUri jwks_uri;
     ::envoy::api::v2::core::DataSource local_jwks;
-    StateStore::Nonce nonce;
+    Common::StateStore::Nonce nonce;
   };
 
   enum state {
@@ -132,7 +132,7 @@ private:
   Upstream::ClusterManager& cluster_manager_;
   std::string cluster_;
   Common::SessionManagerPtr session_manager_;
-  StateStorePtr state_store_;
+  Common::StateStorePtr state_store_;
   std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config_;
   CreateJwksFetcherCb fetcherCb_;
   Common::JwksFetcherPtr fetcher_ = {};
@@ -147,7 +147,7 @@ private:
    * @param ctx the state context.
    * @param code the one-time code to redeem.
    */
-  void redeemCode(const StateStore::StateContext& ctx, const std::string& code);
+  void redeemCode(const Common::StateStore::StateContext& ctx, const std::string& code);
   /* handleAuthenticationResponse handles a redirection from an OIDC provider after a user has
    * authenitcated.
    * @param method the HTTP verb the request was made with.
@@ -166,6 +166,11 @@ private:
    * @param token the token to verify.
    */
   void verifyIdToken(const std::string& token);
+
+  /* AESGCM encrypt the JWT using a key derived from the binding secret and the claim nonce
+   * @return the encrypted JWT
+   */
+  std::string encryptJwt() const;
 };
 } // namespace Oidc
 } // namespace HttpFilters

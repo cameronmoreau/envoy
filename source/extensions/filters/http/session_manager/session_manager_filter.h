@@ -47,7 +47,9 @@ private:
    * @param headers HTTP headers to encode the token into.
    * @param token the token.
    */
-  void encodeToken(Http::HeaderMap& headers, const std::string& token);
+  void encodeToken(Http::HeaderMap& headers, const std::string& token) const;
+
+  absl::optional<std::string> decryptToken(const std::string& token) const;
 };
 } // namespace SessionManager
 } // namespace HttpFilters

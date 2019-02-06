@@ -1,4 +1,4 @@
-#include "extensions/filters/http/oidc/state_store.h"
+#include "extensions/filters/http/common/state_store.h"
 
 #include <map>
 
@@ -10,7 +10,7 @@
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Oidc {
+namespace Common {
 namespace {
 StateStore::StateContext unknown_context;
 }
@@ -123,7 +123,7 @@ private:
  */
 StateStorePtr StateStore::create() { return std::make_shared<LocalStateStoreImpl>(); }
 
-} // namespace Oidc
+} // namespace Common
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy

@@ -4,7 +4,7 @@
 #include "envoy/server/filter_config.h"
 
 #include "extensions/filters/http/common/factory_base.h"
-#include "extensions/filters/http/oidc/state_store.h"
+#include "extensions/filters/http/common/state_store.h"
 #include "extensions/filters/http/well_known_names.h"
 
 namespace Envoy {
@@ -20,7 +20,7 @@ class FilterFactory
       public Logger::Loggable<Logger::Id::filter> {
 public:
   FilterFactory() : FactoryBase(HttpFilterNames::get().OpenIDConnect) {
-    state_store_ = StateStore::create();
+    state_store_ = Common::StateStore::create();
   }
 
 private:
@@ -28,7 +28,7 @@ private:
       const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig& proto_config,
       const std::string& stats_prefix, Server::Configuration::FactoryContext& context) override;
 
-  StateStorePtr state_store_;
+  Common::StateStorePtr state_store_;
 };
 
 } // namespace Oidc

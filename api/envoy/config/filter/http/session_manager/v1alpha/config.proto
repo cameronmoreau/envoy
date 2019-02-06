@@ -47,6 +47,23 @@ message TokenBinding {
   // The name of the header that includes the cryptographic session token binding. A good choices
   // for this field are x-xsrf-token or x-csrf-token
   string binding = 3;
+
+  enum HkdfHash {
+    SHA256 = 0;
+    SHA384 = 1;
+    SHA512 = 2;
+  }
+
+  // The hash algorithm to be used in the HKDF key derivation
+  HkdfHash hkdf_hash = 4;
+
+  enum EncryptionAlg {
+    AES128GCM = 0;
+    AES256GCM = 1;
+  }
+
+  // The encryption algorithm to use for token encryption
+  EncryptionAlg encryption_alg = 5;
 }
 
 // This message specifies the configuration of a Session Manager filter that

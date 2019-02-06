@@ -69,3 +69,39 @@ envoy_cc_library(
         "//source/common/common:base64_lib",
     ],
 )
+
+envoy_cc_library(
+    name = "state_store_lib",
+    srcs = ["state_store.cc"],
+    hdrs = ["state_store.h"],
+    external_deps = [
+        "ssl",
+    ],
+    deps = [
+        "//include/envoy/common:time_interface",
+        "//source/common/common:assert_lib",
+        "//source/common/common:base64_lib",
+        "//source/common/common:thread_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "token_encryptor_lib",
+    srcs = [
+        "gcm_encryptor.cc",
+        "hkdf_deriver.cc",
+        "token_encryptor.cc",
+    ],
+    hdrs = [
+        "gcm_encryptor.h",
+        "hkdf_deriver.h",
+        "token_encryptor.h",
+    ],
+    external_deps = ["ssl"],
+    deps = [
+        "//source/common/common:assert_lib",
+        "//source/common/common:minimal_logger_lib",
+        "//source/extensions/filters/http/common:state_store_lib",
+        "@envoy_api//envoy/config/filter/http/session_manager/v1alpha:session_manager_cc",
+    ],
+)

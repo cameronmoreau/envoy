@@ -30,6 +30,8 @@ envoy_cc_library(
         "//include/envoy/upstream:cluster_manager_interface",
         "//source/common/http:utility_lib",
         "//source/extensions/filters/http/common:session_manager_lib",
+        "//source/extensions/filters/http/common:state_store_lib",
+        "//source/extensions/filters/http/common:token_encryptor_lib",
         "@envoy_api//envoy/config/filter/http/session_manager/v1alpha:session_manager_cc",
     ],
 )

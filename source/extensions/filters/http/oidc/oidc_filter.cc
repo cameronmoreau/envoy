@@ -7,12 +7,15 @@
 
 #include "envoy/config/filter/http/oidc/v1alpha/config.pb.h"
 
+#include "common/common/base64.h"
 #include "common/common/enum_to_int.h"
 #include "common/config/datasource.h"
 #include "common/http/codes.h"
 #include "common/http/message_impl.h"
 #include "common/http/utility.h"
 #include "common/protobuf/protobuf.h"
+
+#include "extensions/filters/http/common/token_encryptor.h"
 
 #include "openssl/crypto.h"
 
@@ -73,17 +76,11 @@ void sendResponse(Http::StreamDecoderFilterCallbacks& callbacks, Http::Code resp
 }
 
 void sendRedirect(Http::StreamDecoderFilterCallbacks& callbacks, const std::string& new_path,
-                  Http::Code response_code, const AdditionalHeaders_t& additionalHeaders) {
+                  Http::Code response_code, const AdditionalHeaders_t& additionalHeaders = {}) {
   AdditionalHeaders_t allHeaders = additionalHeaders;
   allHeaders.push_back(
       std::pair<const LowerCaseString&, std::string>(Http::Headers::get().Location, new_path));
   sendResponse(callbacks, response_code, allHeaders);
-}
-
-void sendRedirect(Http::StreamDecoderFilterCallbacks& callbacks, const std::string& new_path,
-                  Http::Code response_code) {
-  AdditionalHeaders_t additionalHeaders;
-  sendRedirect(callbacks, new_path, response_code, additionalHeaders);
 }
 
 std::string scopesToString(const Protobuf::RepeatedPtrField<std::string>& scopes) {
@@ -136,7 +133,7 @@ std::string OidcFilter::makeSetCookieValue(const std::string& name, const std::s
 
 OidcFilter::OidcFilter(
     Upstream::ClusterManager& cluster_manager, Common::SessionManagerPtr session_manager,
-    StateStorePtr state_store,
+    Common::StateStorePtr state_store,
     std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
     CreateJwksFetcherCb fetcherCb, TimeSource& time_source)
     : cluster_manager_(cluster_manager), session_manager_(session_manager),
@@ -154,7 +151,7 @@ void OidcFilter::onDestroy() {
   }
 }
 
-void OidcFilter::redeemCode(const StateStore::StateContext& ctx, const std::string& code) {
+void OidcFilter::redeemCode(const Common::StateStore::StateContext& ctx, const std::string& code) {
   ENVOY_LOG(trace, "{}", __func__);
   ENVOY_LOG(trace, "Attempting to redeem code {}, for idp {}", code, ctx.idp_);
   const auto& matches = config_->matches();
@@ -213,7 +210,7 @@ void OidcFilter::handleAuthenticationResponse(const std::string& method, const s
                                     Http::CodeUtility::toString(Http::Code::BadRequest), false);
       state_machine_ = state::replied;
     } else {
-      StateStore::StateContext ctx = state_store_->get(state->second, time_source_);
+      Common::StateStore::StateContext ctx = state_store_->get(state->second, time_source_);
       if (ctx != state_store_->end()) {
         // State has been found. Redeem JWT using the authorization code.
         ENVOY_LOG(trace, "Valid state in handleAuthenticationResponse. Redeeming token...");
@@ -232,7 +229,7 @@ void OidcFilter::handleAuthenticationResponse(const std::string& method, const s
 void OidcFilter::redirectToAuthenticationServer(
     const std::string& idp_name,
     const ::envoy::config::filter::http::oidc::v1alpha::OidcClient& idp, const std::string& host) {
-  StateStore::StateContext ctx(idp_name, host);
+  Common::StateStore::StateContext ctx(idp_name, host);
   auto state = state_store_->create(ctx, authentictionResponseTimeout, time_source_);
   // We need to construct our local authentication callback endpoint.
   std::ostringstream endpoint_stream;
@@ -241,7 +238,7 @@ void OidcFilter::redirectToAuthenticationServer(
       "{}?response_type=code&scope={}&client_id={}&state={}&nonce={}&redirect_uri={}",
       idp.authorization_endpoint().uri(), scopesToString(idp.scopes()), idp.client_id(), state,
       ctx.nonce_.ToString(), Http::Utility::urlSafeEncode(endpoint_stream.str()));
-  sendRedirect(*decoder_callbacks_, location, Http::Code::Found);
+  sendRedirect(*decoder_callbacks_, location, Http::Code::SeeOther);
 }
 
 void OidcFilter::verifyIdToken(const std::string& token) {
@@ -251,7 +248,7 @@ void OidcFilter::verifyIdToken(const std::string& token) {
   if (status != ::google::jwt_verify::Status::Ok) {
     // TODO (nickrmc): remove all the duplicate fail code.
     auth_request_.request = nullptr;
-    ENVOY_LOG(warn, "Failed to retrieve JWKS.");
+    ENVOY_LOG(warn, "Failed to parse JWT: {}", enumToInt(status));
     Http::Utility::sendLocalReply(
         false, *decoder_callbacks_, false, Http::Code::InternalServerError,
         Http::CodeUtility::toString(Http::Code::InternalServerError), false);
@@ -351,7 +348,8 @@ Http::FilterHeadersStatus OidcFilter::encodeHeaders(Http::HeaderMap& headers, bo
     // Expire cookie 30 seconds before the jwt.
     int64_t cookieLifetime = std::max(seconds_until_expiration - 30, int64_t(0));
     ENVOY_LOG(trace, "OidcFilter {} lifetime", __func__, cookieLifetime);
-    auto cookie = makeSetCookieValueHttpOnly(config_->binding().token(), jwt_.jwt_, cookieLifetime);
+    auto cookie =
+        makeSetCookieValueHttpOnly(config_->binding().token(), encryptJwt(), cookieLifetime);
     headers.addCopy(Http::Headers::get().SetCookie, cookie);
     // headers.addCopy(Http::Headers::get().SetCookie, xsrf);
   }
@@ -363,6 +361,12 @@ void OidcFilter::setDecoderFilterCallbacks(Http::StreamDecoderFilterCallbacks& c
   decoder_callbacks_ = &callbacks;
 }
 
+std::string OidcFilter::encryptJwt() const {
+  // Use the configured secret and the claim nonce to encrypt the token
+  auto token_encryptor = Common::TokenEncryptor::create(config_->binding());
+  return token_encryptor->encrypt(jwt_.jwt_, auth_request_.nonce);
+}
+
 void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
   ENVOY_LOG(trace, "OidcFilter {}", __func__);
   // Verify the tokens signature.
@@ -370,7 +374,7 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
   if (status != ::google::jwt_verify::Status::Ok) {
     // TODO (nickrmc): remove all the duplicate fail code.
     auth_request_.request = nullptr;
-    ENVOY_LOG(warn, "Failed to verify JWKS.");
+    ENVOY_LOG(warn, "Failed to verify JWT.");
     Http::Utility::sendLocalReply(
         false, *decoder_callbacks_, false, Http::Code::InternalServerError,
         Http::CodeUtility::toString(Http::Code::InternalServerError), false);
@@ -380,9 +384,10 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
   // Verify our expected nonce is present as a claim in the JWT
   auto claim = jwt_.payload_json_.FindMember(nonceClaim);
   if (claim == jwt_.payload_json_.MemberEnd() ||
-      auth_request_.nonce != StateStore::Nonce(claim->value.GetString())) {
+      auth_request_.nonce != Common::StateStore::Nonce(claim->value.GetString())) {
     ENVOY_LOG(debug,
-              "{} Authentication failed as the expected nonce claim is missing or incorrect.");
+              "{} Authentication failed as the expected nonce claim is missing or incorrect.",
+              __func__);
     Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::Unauthorized,
                                   Http::CodeUtility::toString(Http::Code::Unauthorized), false);
     state_machine_ = state::replied;
@@ -392,14 +397,19 @@ void OidcFilter::onJwksSuccess(google::jwt_verify::JwksPtr&& jwks) {
     int64_t seconds_until_expiration = expiry(expiry_, time_source_);
     // Expire cookie 30 seconds before the jwt.
     int64_t cookieLifetime = std::max(seconds_until_expiration - 30, int64_t(0));
+
+    // Create XSRF cookie
     auto xsrfToken = session_manager_->CreateToken(jwt_.jwt_);
     auto xsrf = makeSetCookieValue(config_->binding().binding(), xsrfToken, cookieLifetime);
-    auto cookie = makeSetCookieValueHttpOnly(config_->binding().token(), jwt_.jwt_, cookieLifetime);
+
+    // Create encrypted JWT cookie
+    auto cookie =
+        makeSetCookieValueHttpOnly(config_->binding().token(), encryptJwt(), cookieLifetime);
     AdditionalHeaders_t headers = {
         std::pair<const LowerCaseString&, std::string>{Http::Headers::get().SetCookie, xsrf},
         std::pair<const LowerCaseString&, std::string>{Http::Headers::get().SetCookie, cookie},
     };
-    sendRedirect(*decoder_callbacks_, config_->landing_page(), Http::Code::Found, headers);
+    sendRedirect(*decoder_callbacks_, config_->landing_page(), Http::Code::SeeOther, headers);
     state_machine_ = state::setCookie;
   }
 }
@@ -435,15 +445,21 @@ void OidcFilter::onSuccess(Http::MessagePtr&& response) {
                                     Http::CodeUtility::toString(Http::Code::BadGateway), false);
       state_machine_ = state::replied;
     } else {
-      Json::ObjectSharedPtr token_response =
-          Json::Factory::loadFromString(response->bodyAsString());
-      // Verify response body conforms to that defined in
-      // http://openid.net/specs/openid-connect-core-1_0.html#TokenResponse
-      token_response->validateSchema(tokenResponseSchema);
-      // Extract identity token.
-      auto id_token = token_response->getString("id_token");
-      // asynchronous verification of token
-      verifyIdToken(id_token);
+      try {
+        Json::ObjectSharedPtr token_response =
+            Json::Factory::loadFromString(response->bodyAsString());
+        // Verify response body conforms to that defined in
+        // http://openid.net/specs/openid-connect-core-1_0.html#TokenResponse
+        token_response->validateSchema(tokenResponseSchema);
+        // Extract identity token.
+        auto id_token = token_response->getString("id_token");
+        // asynchronous verification of token
+        verifyIdToken(id_token);
+      } catch (const Json::Exception& jsonEx) {
+        ENVOY_LOG(warn, "Received invalid JSON from token endpoint.");
+        Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::BadGateway,
+                                      Http::CodeUtility::toString(Http::Code::BadGateway), false);
+      }
     }
   }
 }
@@ -456,6 +472,7 @@ void OidcFilter::onFailure(Http::AsyncClient::FailureReason) {
                                 false);
   state_machine_ = state::replied;
 }
+
 } // namespace Oidc
 } // namespace HttpFilters
 } // namespace Extensions

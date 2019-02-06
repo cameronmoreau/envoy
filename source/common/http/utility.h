@@ -65,6 +65,14 @@ const char* findQueryStringStart(const HeaderString& path);
 std::string parseCookieValue(const HeaderMap& headers, const std::string& key);
 
 /**
+ * Parse a particular value out of a set cookie header
+ * @param headers supplies the headers to get the cookie from.
+ * @param key the key for the particular cookie value to return
+ * @return std::string the parsed cookie value, or "" if none exists
+ **/
+std::string parseSetCookieValue(const HeaderMap& headers, const std::string& key);
+
+/**
  * Check whether a Set-Cookie header for the given cookie name exists
  * @param headers supplies the headers to search for the cookie
  * @param key the name of the cookie to search for

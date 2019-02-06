@@ -76,3 +76,38 @@ envoy_extension_cc_test(
         "//source/extensions/filters/http/common:session_manager_lib",
     ],
 )
+
+envoy_extension_cc_test(
+    name = "state_store_test",
+    srcs = [
+        "state_store_test.cc",
+    ],
+    extension_name = "envoy.filters.http.oidc",
+    deps = [
+        "//source/extensions/filters/http/common:state_store_lib",
+        "//test/test_common:simulated_time_system_lib",
+        "//test/test_common:utility_lib",
+    ],
+)
+
+envoy_extension_cc_test(
+    name = "gcm_encryptor_test",
+    srcs = [
+        "gcm_encryptor_test.cc",
+    ],
+    extension_name = "envoy.filters.http.oidc",
+    deps = [
+        "//source/extensions/filters/http/common:gcm_encryptor_lib",
+    ],
+)
+
+envoy_extension_cc_test(
+    name = "hkdf_deriver_test",
+    srcs = [
+        "hkdf_deriver_test.cc",
+    ],
+    extension_name = "envoy.filters.http.oidc",
+    deps = [
+        "//source/extensions/filters/http/common:hkdf_deriver_lib",
+    ],
+)
