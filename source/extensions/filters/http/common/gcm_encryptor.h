@@ -29,7 +29,7 @@ public:
   virtual std::vector<unsigned char>
   seal(const std::vector<unsigned char>& plaintext,
        absl::optional<std::vector<unsigned char>> nonce = absl::nullopt,
-       const std::vector<unsigned char>& aad = {}) = 0;
+       const std::vector<unsigned char>& aad = {}) PURE;
 
   /**
    * GCM decrypt and verify some data.
@@ -39,7 +39,7 @@ public:
    */
   virtual absl::optional<std::vector<unsigned char>>
   open(const std::vector<unsigned char>& ciphertext,
-       const std::vector<unsigned char>& aad = {}) = 0;
+       const std::vector<unsigned char>& aad = {}) PURE;
 
   /**
    * Create an instance of a GcmEncryptor.

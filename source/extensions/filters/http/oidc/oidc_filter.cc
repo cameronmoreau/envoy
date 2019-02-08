@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <exception>
+#include <functional>
 #include <set>
 #include <string>
 
@@ -25,7 +26,9 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Oidc {
+
 namespace {
+
 const char* nonceClaim = "nonce";
 const char hexTable[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
                            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -35,7 +38,7 @@ const std::vector<LowerCaseString> validTokenResponseContentTypes = {
     LowerCaseString{"application/json; charset=utf-8"},
 };
 const std::chrono::milliseconds tokenRedemptionTimeout(120 * 1000); // 120 seconds
-const std::chrono::seconds authentictionResponseTimeout(5 * 60);    // 5 minutes
+const std::chrono::seconds authenticationResponseTimeout(5 * 60);   // 5 minutes
 const std::string tokenResponseSchema(
     R"EOF(
       {
@@ -99,6 +102,7 @@ std::string scopesToString(const Protobuf::RepeatedPtrField<std::string>& scopes
   }
   return output.str();
 }
+
 } // unnamed namespace
 
 bool OidcFilter::isSupportedContentType(const LowerCaseString& got) {
@@ -133,9 +137,15 @@ std::string OidcFilter::makeSetCookieValue(const std::string& name, const std::s
 
 OidcFilter::OidcFilter(
     Upstream::ClusterManager& cluster_manager, Common::SessionManagerPtr session_manager,
-    Common::StateStorePtr state_store,
     std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
     CreateJwksFetcherCb fetcherCb, TimeSource& time_source)
+    : OidcFilter(cluster_manager, session_manager, config, fetcherCb, time_source,
+                 Common::StateStore::create(config->state_store(), cluster_manager)) {}
+
+OidcFilter::OidcFilter(
+    Upstream::ClusterManager& cluster_manager, Common::SessionManagerPtr session_manager,
+    std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
+    CreateJwksFetcherCb fetcherCb, TimeSource& time_source, Common::StateStorePtr state_store)
     : cluster_manager_(cluster_manager), session_manager_(session_manager),
       state_store_(state_store), config_(config), fetcherCb_(fetcherCb), time_source_(time_source) {
   ENVOY_LOG(trace, "{}", __func__);
@@ -210,35 +220,54 @@ void OidcFilter::handleAuthenticationResponse(const std::string& method, const s
                                     Http::CodeUtility::toString(Http::Code::BadRequest), false);
       state_machine_ = state::replied;
     } else {
-      Common::StateStore::StateContext ctx = state_store_->get(state->second, time_source_);
-      if (ctx != state_store_->end()) {
-        // State has been found. Redeem JWT using the authorization code.
-        ENVOY_LOG(trace, "Valid state in handleAuthenticationResponse. Redeeming token...");
-        redeemCode(ctx, code->second);
-      } else {
-        // Unknown/unexpected state
-        ENVOY_LOG(info, "Invalid state in handleAuthenticationResponse {}", state->second);
-        Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::BadRequest,
-                                      Http::CodeUtility::toString(Http::Code::BadRequest), false);
-        state_machine_ = state::replied;
-      }
+      state_ = std::move(state->second);
+      code_ = std::move(code->second);
+      // Attempt to get the state from the store
+      state_store_->get(state_, time_source_, *this);
     }
   }
 }
 
-void OidcFilter::redirectToAuthenticationServer(
-    const std::string& idp_name,
-    const ::envoy::config::filter::http::oidc::v1alpha::OidcClient& idp, const std::string& host) {
+void OidcFilter::onGetSuccess(Common::StateStore::StateContext ctx) {
+  // State has been found. Redeem JWT using the authorization code.
+  ENVOY_LOG(trace, "Valid state in handleAuthenticationResponse. Redeeming token...");
+  redeemCode(ctx, code_);
+}
+
+void OidcFilter::onGetFailure(Common::StateStore::Failure failure) {
+  // Unknown/unexpected state
+  ENVOY_LOG(info, "Invalid state {} in handleAuthenticationResponse: {}", state_, failure);
+  Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::BadRequest,
+                                Http::CodeUtility::toString(Http::Code::BadRequest), false);
+  state_machine_ = state::replied;
+}
+
+void OidcFilter::redirectToAuthenticationServer(const std::string& idp_name,
+                                                const std::string& host) {
+  // First create the state handle, then we can do the redirect in the callback
   Common::StateStore::StateContext ctx(idp_name, host);
-  auto state = state_store_->create(ctx, authentictionResponseTimeout, time_source_);
+  state_store_->create(ctx, authenticationResponseTimeout, time_source_, *this);
+}
+
+void OidcFilter::onCreationSuccess(Common::StateStore::state_handle_t state,
+                                   Common::StateStore::StateContext ctx) {
+  // We can be sure the IDP with this name already exists, as we looked it up in decodeHeaders
+  auto idp = config_->matches().at(ctx.idp_).idp();
   // We need to construct our local authentication callback endpoint.
   std::ostringstream endpoint_stream;
-  endpoint_stream << "https://" << host << config_->authentication_callback();
+  endpoint_stream << "https://" << ctx.hostname_ << config_->authentication_callback();
   auto location = fmt::format(
       "{}?response_type=code&scope={}&client_id={}&state={}&nonce={}&redirect_uri={}",
       idp.authorization_endpoint().uri(), scopesToString(idp.scopes()), idp.client_id(), state,
       ctx.nonce_.ToString(), Http::Utility::urlSafeEncode(endpoint_stream.str()));
   sendRedirect(*decoder_callbacks_, location, Http::Code::SeeOther);
+}
+
+void OidcFilter::onCreationFailure(Common::StateStore::Failure failure) {
+  ENVOY_LOG(warn, "Failed to create state handle: {}", failure);
+  Http::Utility::sendLocalReply(false, *decoder_callbacks_, false, Http::Code::InternalServerError,
+                                Http::CodeUtility::toString(Http::Code::InternalServerError),
+                                false);
 }
 
 void OidcFilter::verifyIdToken(const std::string& token) {
@@ -309,7 +338,7 @@ Http::FilterHeadersStatus OidcFilter::decodeHeaders(Http::HeaderMap& headers, bo
         if (header && std::string(header->value().c_str()) == criteriaRef.value()) {
           ENVOY_LOG(trace, "{} request matches criteria {}:{}", __func__, criteriaRef.header(),
                     criteriaRef.value());
-          redirectToAuthenticationServer(match.first, match.second.idp(), host->value().c_str());
+          redirectToAuthenticationServer(match.first, host->value().c_str());
           ENVOY_LOG(trace, "{}", 4);
           if (state_machine_ == state::replied) {
             return Http::FilterHeadersStatus::StopIteration;

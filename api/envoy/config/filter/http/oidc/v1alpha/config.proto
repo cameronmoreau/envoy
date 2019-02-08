@@ -109,6 +109,23 @@ message Match {
   Criteria criteria = 2;
 }
 
+message StateStore {
+  enum StoreType {
+    // Stores state in local memory
+    // Primarily used for testing
+    IN_MEMORY = 0;
+    // Stores state in Redis
+    REDIS = 1;
+  }
+  StoreType store_type = 1 [(validate.rules).enum.defined_only = true];
+
+  message RedisConnection {
+    // Name of cluster from cluster manager.
+    string cluster = 1 [(validate.rules).string.min_bytes = 1];
+  }
+  RedisConnection redis = 2;
+}
+
 // This message specifies the configuration of an OpenID Connect filter that allows:
 //   1) Envoy to act as a client in the Authorization Code Flow
 //   (https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth) so to
@@ -177,4 +194,6 @@ message OidcConfig {
   string landing_page = 3;
   // Session token configuration.
   envoy.config.filter.http.session_manager.v1alpha.TokenBinding binding = 4;
+  // State store configuration
+  StateStore state_store = 5;
 }

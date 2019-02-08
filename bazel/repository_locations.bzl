@@ -170,6 +170,11 @@ REPOSITORY_LOCATIONS = dict(
         sha256 = "ee5fe78fe417c685ecb77a0a725dc9f6040ae5beb44a0ba4ddb55453aad23a8a",
         urls = ["https://github.com/bazelbuild/rules_go/releases/download/0.16.0/rules_go-0.16.0.tar.gz"],
     ),
+    com_github_cpp_redis_cpp_redis = dict(
+        sha256 = "3859289d8254685fc775bda73de03dad27df923423b8ceb375b02d036c03b02f",
+        strip_prefix = "cpp_redis-4.3.1",
+        urls = ["https://github.com/cpp-redis/cpp_redis/archive/4.3.1.tar.gz"],
+    ),
     six_archive = dict(
         sha256 = "105f8d68616f8248e24bf0e9372ef04d3cc10104f1980f54d57b2ce73a5ad56a",
         strip_prefix = "",

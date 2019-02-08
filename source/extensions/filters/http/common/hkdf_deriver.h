@@ -18,7 +18,7 @@ public:
   virtual ~HkdfDeriver(){};
 
   virtual std::vector<unsigned char> hkdf(size_t out_len, const std::vector<unsigned char>& salt,
-                                          const std::vector<unsigned char>& info = {}) = 0;
+                                          const std::vector<unsigned char>& info = {}) PURE;
 
   /**
    * Create an instance of a HkdfDeriver.

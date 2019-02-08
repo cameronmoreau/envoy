@@ -27,16 +27,29 @@ typedef std::function<Common::JwksFetcherPtr(Upstream::ClusterManager&)> CreateJ
 class OidcFilter : public Http::StreamFilter, // TODO: This is just a decoder stream filter
                    public Common::JwksFetcher::JwksReceiver,
                    public Http::AsyncClient::Callbacks,
+                   public Common::StateStore::StateCreationReceiver,
+                   public Common::StateStore::StateGetReceiver,
                    public Logger::Loggable<Logger::Id::filter> {
 public:
   /* OidcFilter constructor.
+   * Will initialise a new state store based on the configuration given.
    * @param manager the cluster manager to address the configured OIDC provider.
    * @param the name of the configured OIDC provider.
    */
   OidcFilter(Upstream::ClusterManager& cluster_manager, Common::SessionManagerPtr session_manager,
-             Common::StateStorePtr state_store,
              std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
              CreateJwksFetcherCb fetcherCb, TimeSource& time_source);
+
+  /* OidcFilter constructor.
+   * Allows injection of an existing state store.
+   * @param manager the cluster manager to address the configured OIDC provider.
+   * @param the name of the configured OIDC provider.
+   * @param state_store existing state store to be used.
+   */
+  OidcFilter(Upstream::ClusterManager& cluster_manager, Common::SessionManagerPtr session_manager,
+             std::shared_ptr<const ::envoy::config::filter::http::oidc::v1alpha::OidcConfig> config,
+             CreateJwksFetcherCb fetcherCb, TimeSource& time_source,
+             Common::StateStorePtr state_store);
   ~OidcFilter();
 
   // Http::StreamFilterBase
@@ -159,9 +172,7 @@ private:
    * @param idp the idp to redirect to.
    * @param host the host being addressed that'll be used to forward a token redemption code.
    */
-  void redirectToAuthenticationServer(
-      const std::string& idp_name,
-      const ::envoy::config::filter::http::oidc::v1alpha::OidcClient& idp, const std::string& host);
+  void redirectToAuthenticationServer(const std::string& idp_name, const std::string& host);
   /* verifyToken verifies a JWT token is authentic.
    * @param token the token to verify.
    */
@@ -171,6 +182,31 @@ private:
    * @return the encrypted JWT
    */
   std::string encryptJwt() const;
+
+  std::string state_;
+  std::string code_;
+
+  // StateStore::StateCreationReceiver callbacks
+  /* onCreationSuccess is used to handle the successful creation of a state context
+   * @param handle  the handle that has been generated for the new context.
+   * @param ctx     the state context data.
+   */
+  void onCreationSuccess(Common::StateStore::state_handle_t handle,
+                         Common::StateStore::StateContext ctx);
+  /* onCreationSuccess is used to handle failure in the creation of a state context.
+   * @param failure   the reason for failure.
+   */
+  void onCreationFailure(Common::StateStore::Failure failure);
+
+  // StateStore::StateGetReceiver callbacks
+  /* onGetSuccess is used to handle the successful retrieval of a state context.
+   * @param context   the state context data.
+   */
+  void onGetSuccess(Common::StateStore::StateContext context);
+  /* onGetFailure is used to handle failure in the retrieval of a state context.
+   * @param failure   the reason for failure.
+   */
+  void onGetFailure(Common::StateStore::Failure failure);
 };
 } // namespace Oidc
 } // namespace HttpFilters

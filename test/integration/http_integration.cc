@@ -274,14 +274,15 @@ void HttpIntegrationTest::cleanupUpstreamAndDownstream() {
 }
 
 uint64_t
-HttpIntegrationTest::waitForNextUpstreamRequest(const std::vector<uint64_t>& upstream_indices) {
+HttpIntegrationTest::waitForNextUpstreamRequest(const std::vector<uint64_t>& upstream_indices,
+                                                std::chrono::milliseconds timeout) {
   uint64_t upstream_with_request;
   // If there is no upstream connection, wait for it to be established.
   if (!fake_upstream_connection_) {
     AssertionResult result = AssertionFailure();
     for (auto upstream_index : upstream_indices) {
-      result = fake_upstreams_[upstream_index]->waitForHttpConnection(*dispatcher_,
-                                                                      fake_upstream_connection_);
+      result = fake_upstreams_[upstream_index]->waitForHttpConnection(
+          *dispatcher_, fake_upstream_connection_, timeout);
       if (result) {
         upstream_with_request = upstream_index;
         break;
@@ -291,17 +292,18 @@ HttpIntegrationTest::waitForNextUpstreamRequest(const std::vector<uint64_t>& ups
   }
   // Wait for the next stream on the upstream connection.
   AssertionResult result =
-      fake_upstream_connection_->waitForNewStream(*dispatcher_, upstream_request_);
+      fake_upstream_connection_->waitForNewStream(*dispatcher_, upstream_request_, false, timeout);
   RELEASE_ASSERT(result, result.message());
   // Wait for the stream to be completely received.
-  result = upstream_request_->waitForEndStream(*dispatcher_);
+  result = upstream_request_->waitForEndStream(*dispatcher_, timeout);
   RELEASE_ASSERT(result, result.message());
 
   return upstream_with_request;
 }
 
-void HttpIntegrationTest::waitForNextUpstreamRequest(uint64_t upstream_index) {
-  waitForNextUpstreamRequest(std::vector<uint64_t>({upstream_index}));
+void HttpIntegrationTest::waitForNextUpstreamRequest(uint64_t upstream_index,
+                                                     std::chrono::milliseconds timeout) {
+  waitForNextUpstreamRequest(std::vector<uint64_t>({upstream_index}), timeout);
 }
 
 void HttpIntegrationTest::testRouterRequestAndResponseWithBody(

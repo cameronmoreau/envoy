@@ -7,6 +7,8 @@
 
 #include "envoy/common/pure.h"
 #include "envoy/common/time.h"
+#include "envoy/config/filter/http/oidc/v1alpha/config.pb.h"
+#include "envoy/upstream/cluster_manager.h"
 
 #include "common/common/assert.h"
 #include "common/common/base64.h"
@@ -73,11 +75,24 @@ public:
       return (idp_ == rhs.idp_ && hostname_ == rhs.hostname_ && nonce_ == rhs.nonce_);
     }
   };
-  /**
-   * unknown state identifier.
-   * @return the identity of the unknown state.
-   */
-  virtual const StateContext& end() const PURE;
+
+  typedef std::string Failure;
+
+  class StateCreationReceiver {
+  public:
+    virtual ~StateCreationReceiver() = default;
+
+    virtual void onCreationSuccess(state_handle_t handle, StateContext ctx) PURE;
+    virtual void onCreationFailure(Failure failure) PURE;
+  };
+
+  class StateGetReceiver {
+  public:
+    virtual ~StateGetReceiver() = default;
+
+    virtual void onGetSuccess(StateContext context) PURE;
+    virtual void onGetFailure(Failure failure) PURE;
+  };
 
   virtual ~StateStore(){};
   /**
@@ -86,8 +101,8 @@ public:
    * @param expiry the expiration of the state.
    * @return a handle to the state stored.
    */
-  virtual state_handle_t create(const StateContext& ctx, const std::chrono::seconds& expiry,
-                                TimeSource& time_source) PURE;
+  virtual void create(const StateContext& ctx, const std::chrono::seconds& expiry,
+                      TimeSource& time_source, StateCreationReceiver& receiver) PURE;
   /**
    * get returns the state for the given handle and removing it from the state store.
    * If no state is associated with the given handle, the returned value will be equal to the result
@@ -95,14 +110,27 @@ public:
    * @param handle the handle to the stored state.
    * @return the state context associated with the handle.
    */
-  virtual StateContext get(const state_handle_t& handle, TimeSource& time_source) PURE;
+  virtual void get(const state_handle_t& handle, TimeSource& time_source,
+                   StateGetReceiver& receiver) PURE;
 
   /**
    * Create an instance of a StateStore.
-   * @param time_source the source of required time values.
+   * @param config            the state store configuration.
+   * @param cluster_manager   a cluster manager (required for Redis-backed state store)
    * @return An instance of a StateStore.
    */
-  static StateStorePtr create();
+  static StateStorePtr
+  create(const ::envoy::config::filter::http::oidc::v1alpha::StateStore& config,
+         Upstream::ClusterManager& cluster_manager);
+
+  /**
+   * Create an instance of a StateStore. This version with a cluster manager only supports in-memory
+   * state stores.
+   * @param config            the state store configuration.
+   * @return An instance of a StateStore.
+   */
+  static StateStorePtr
+  create(const ::envoy::config::filter::http::oidc::v1alpha::StateStore& config = {});
 };
 } // namespace Common
 } // namespace HttpFilters

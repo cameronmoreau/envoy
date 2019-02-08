@@ -287,6 +287,7 @@ def envoy_dependencies(path = "@envoy_deps//", skip_targets = []):
     _com_github_tencent_rapidjson()
     _com_google_googletest()
     _com_google_protobuf()
+    _com_github_cpp_redis_cpp_redis()
 
     # Used for bundling gcovr into a relocatable .par file.
     _repository_impl("subpar")
@@ -565,6 +566,16 @@ def _com_github_google_jwt_verify():
     native.bind(
         name = "jwt_verify_lib",
         actual = "@com_github_google_jwt_verify//:jwt_verify_lib",
+    )
+
+def _com_github_cpp_redis_cpp_redis():
+    _repository_impl(
+        name = "com_github_cpp_redis_cpp_redis",
+        build_file = "@envoy//bazel/external:cpp_redis.BUILD",
+    )
+    native.bind(
+        name = "cpp_redis",
+        actual = "@com_github_cpp_redis_cpp_redis//:cpp_redis",
     )
 
 def _apply_dep_blacklist(ctxt, recipes):

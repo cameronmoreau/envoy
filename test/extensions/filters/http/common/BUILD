@@ -97,7 +97,7 @@ envoy_extension_cc_test(
     ],
     extension_name = "envoy.filters.http.oidc",
     deps = [
-        "//source/extensions/filters/http/common:gcm_encryptor_lib",
+        "//source/extensions/filters/http/common:token_encryptor_lib",
     ],
 )
 
@@ -108,6 +108,6 @@ envoy_extension_cc_test(
     ],
     extension_name = "envoy.filters.http.oidc",
     deps = [
-        "//source/extensions/filters/http/common:hkdf_deriver_lib",
+        "//source/extensions/filters/http/common:token_encryptor_lib",
     ],
 )

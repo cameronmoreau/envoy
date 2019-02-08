@@ -72,16 +72,25 @@ envoy_cc_library(
 
 envoy_cc_library(
     name = "state_store_lib",
-    srcs = ["state_store.cc"],
-    hdrs = ["state_store.h"],
+    srcs = [
+        "redis_conn.cc",
+        "state_store.cc",
+    ],
+    hdrs = [
+        "redis_conn.h",
+        "state_store.h",
+    ],
     external_deps = [
-        "ssl",
+        "cpp_redis",
     ],
     deps = [
         "//include/envoy/common:time_interface",
+        "//include/envoy/upstream:cluster_manager_interface",
         "//source/common/common:assert_lib",
         "//source/common/common:base64_lib",
         "//source/common/common:thread_lib",
+        "//source/common/network:filter_lib",
+        "@envoy_api//envoy/config/filter/http/oidc/v1alpha:oidc_cc",
     ],
 )
 

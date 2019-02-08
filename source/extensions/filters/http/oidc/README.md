@@ -70,6 +70,8 @@ static_resources:
                 secret: Mb07unY1jd4h2s5wUSO9KJzhqjVTazXMWCp4OAiiGko=
                 token: __Secure-acme-session-cookie
                 binding: x-xsrf-token
+                hkdf_hash: SHA256
+                encryption_alg: AES256GCM
   clusters:
   - name: internal-cluster
     connect_timeout: 1.0s

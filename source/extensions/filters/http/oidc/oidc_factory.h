@@ -19,9 +19,9 @@ class FilterFactory
     : public Common::FactoryBase<::envoy::config::filter::http::oidc::v1alpha::OidcConfig>,
       public Logger::Loggable<Logger::Id::filter> {
 public:
-  FilterFactory() : FactoryBase(HttpFilterNames::get().OpenIDConnect) {
-    state_store_ = Common::StateStore::create();
-  }
+  FilterFactory()
+      : FactoryBase(HttpFilterNames::get().OpenIDConnect),
+        state_store_(Common::StateStore::create()) {}
 
 private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(

@@ -46,9 +46,16 @@ FilterFactory::createFilterFactoryFromProtoTyped(const OidcConfig& proto_config,
       Common::SessionManager::SessionManager::Create(proto_config.binding().secret());
   return [this, &context, sharedConfig,
           sessionManagerPtr](Http::FilterChainFactoryCallbacks& callbacks) -> void {
-    callbacks.addStreamDecoderFilter(std::make_shared<OidcFilter>(
-        context.clusterManager(), sessionManagerPtr, state_store_, sharedConfig,
-        Common::JwksFetcher::create, context.dispatcher().timeSystem()));
+    if (sharedConfig->state_store().store_type() ==
+        ::envoy::config::filter::http::oidc::v1alpha::StateStore::IN_MEMORY) {
+      callbacks.addStreamDecoderFilter(std::make_shared<OidcFilter>(
+          context.clusterManager(), sessionManagerPtr, sharedConfig, Common::JwksFetcher::create,
+          context.dispatcher().timeSystem(), state_store_));
+    } else {
+      callbacks.addStreamDecoderFilter(std::make_shared<OidcFilter>(
+          context.clusterManager(), sessionManagerPtr, sharedConfig, Common::JwksFetcher::create,
+          context.dispatcher().timeSystem()));
+    }
   };
 }
 

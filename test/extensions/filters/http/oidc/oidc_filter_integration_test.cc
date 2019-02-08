@@ -248,7 +248,7 @@ TEST_F(OidcFilterIntegrationTest, TestAuthCallback) {
   });
 
   // Await the request to the token endpoint
-  waitForNextUpstreamRequest(3);
+  waitForNextUpstreamRequest(3, std::chrono::milliseconds(500));
   fake_upstreams_[3]->set_allow_unexpected_disconnects(true);
 
   // Make sure the token redeem request is correct
@@ -272,7 +272,7 @@ TEST_F(OidcFilterIntegrationTest, TestAuthCallback) {
   upstream_request_->encodeData(token_data, true);
 
   // Await the request to the jwks endpoint, and respond with the public key/s to verify the JWT
-  waitForNextUpstreamRequest(3);
+  waitForNextUpstreamRequest(3, std::chrono::milliseconds(500));
   fake_upstreams_[3]->set_allow_unexpected_disconnects(true);
   upstream_request_->encodeHeaders(
       Http::TestHeaderMapImpl{{":status", "200"}, {"content-type", "application/json"}}, false);
@@ -300,7 +300,7 @@ TEST_F(OidcFilterIntegrationTest, TestAuthCallback) {
       {Http::Headers::get().Cookie.get(), fmt::format("__Secure-acme-session-cookie={}", cookie)}});
 
   fake_upstream_connection_ = nullptr;
-  waitForNextUpstreamRequest(0);
+  waitForNextUpstreamRequest(0, std::chrono::milliseconds(500));
   fake_upstreams_[0]->set_allow_unexpected_disconnects(true);
 
   // Test that our upstream received the decrypted JWT in the authorisation header
