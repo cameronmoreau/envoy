@@ -30,8 +30,6 @@ namespace Oidc {
 namespace {
 
 const char* nonceClaim = "nonce";
-const char hexTable[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
-                           '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 const std::vector<LowerCaseString> validTokenResponseContentTypes = {
     LowerCaseString{"application/json"},
     LowerCaseString{"application/json;charset=utf-8"},
