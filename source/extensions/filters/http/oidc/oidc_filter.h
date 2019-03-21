@@ -192,21 +192,21 @@ private:
    * @param ctx     the state context data.
    */
   void onCreationSuccess(Common::StateStore::state_handle_t handle,
-                         Common::StateStore::StateContext ctx);
+                         Common::StateStore::StateContext ctx) override;
   /* onCreationSuccess is used to handle failure in the creation of a state context.
    * @param failure   the reason for failure.
    */
-  void onCreationFailure(Common::StateStore::Failure failure);
+  void onCreationFailure(Common::StateStore::Failure failure) override;
 
   // StateStore::StateGetReceiver callbacks
   /* onGetSuccess is used to handle the successful retrieval of a state context.
    * @param context   the state context data.
    */
-  void onGetSuccess(Common::StateStore::StateContext context);
+  void onGetSuccess(Common::StateStore::StateContext context) override;
   /* onGetFailure is used to handle failure in the retrieval of a state context.
    * @param failure   the reason for failure.
    */
-  void onGetFailure(Common::StateStore::Failure failure);
+  void onGetFailure(Common::StateStore::Failure failure) override;
 };
 } // namespace Oidc
 } // namespace HttpFilters

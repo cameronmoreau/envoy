@@ -68,11 +68,11 @@ public:
   }
 
   virtual void set_on_disconnection_handler(
-      const cpp_redis::network::tcp_client_iface::disconnection_handler_t& handler) {
+      const cpp_redis::network::tcp_client_iface::disconnection_handler_t& handler) override {
     disconnection_handler_ = handler;
   }
 
-  virtual void onEvent(Network::ConnectionEvent event) {
+  virtual void onEvent(Network::ConnectionEvent event) override {
     switch (event) {
     case Network::ConnectionEvent::LocalClose:
     case Network::ConnectionEvent::RemoteClose:
@@ -83,11 +83,11 @@ public:
     }
   }
 
-  virtual void onAboveWriteBufferHighWatermark() {}
+  virtual void onAboveWriteBufferHighWatermark() override {}
 
-  virtual void onBelowWriteBufferLowWatermark() {}
+  virtual void onBelowWriteBufferLowWatermark() override {}
 
-  virtual Network::FilterStatus onData(Buffer::Instance& buffer, bool end_stream) {
+  virtual Network::FilterStatus onData(Buffer::Instance& buffer, bool end_stream) override {
     addToBuffer(buffer);
     processBuffer();
 
