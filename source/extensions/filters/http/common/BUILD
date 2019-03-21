@@ -82,6 +82,7 @@ envoy_cc_library(
     ],
     external_deps = [
         "cpp_redis",
+        "ssl",
     ],
     deps = [
         "//include/envoy/common:time_interface",
